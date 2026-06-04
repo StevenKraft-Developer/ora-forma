@@ -6,15 +6,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: OraColors.background,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: const _PhoneScreen(),
-          ),
-        ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: const _PhoneScreen(),
       ),
     );
   }
@@ -28,7 +23,6 @@ class _PhoneScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Inner background – we’ll Marian-ize this later
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFFF7F4ED), Color(0xFFEFE8DB)],
@@ -58,8 +52,6 @@ class _PhoneScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            const _BottomNav(),
           ],
         ),
       ),
@@ -98,10 +90,10 @@ class _HeroCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            OraColors.primary, // Marian blue #335C99
-            OraColors.primaryDeep, // #223A6E
+            OraColors.primary,
+            OraColors.primaryDeep,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -114,7 +106,6 @@ class _HeroCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date and logo row — white text on blue
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -126,13 +117,12 @@ class _HeroCard extends StatelessWidget {
                       color: OraColors.gold,
                     ),
                   ),
-                  // Logo badge — light blue gradient circle
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [Color(0xFF4E7AB5), Color(0xFF3D6394)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -146,10 +136,7 @@ class _HeroCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 10),
-
-              // Greeting in white
               Text(
                 'Good morning, brothers.',
                 style: textTheme.headlineSmall?.copyWith(
@@ -157,23 +144,16 @@ class _HeroCard extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-
               const SizedBox(height: 6),
-
-              // Subtitle in white with reduced opacity
               Text(
-                'Begin with prayer, keep watch over your habits, and '
-                'stay rooted in discipline.',
+                'Begin with prayer, keep watch over your habits, and stay rooted in discipline.',
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.white.withOpacity(0.8),
                   height: 1.4,
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Verse card — white floating on blue
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
@@ -192,8 +172,7 @@ class _HeroCard extends StatelessWidget {
                     children: [
                       const TextSpan(
                         text:
-                            '"Be watchful, stand firm in the faith, '
-                            'act like men, be strong."',
+                            '"Be watchful, stand firm in the faith, act like men, be strong."',
                         style: TextStyle(fontWeight: FontWeight.w500),
                       ),
                       const TextSpan(text: ' '),
@@ -226,16 +205,12 @@ class _TodaySection extends StatefulWidget {
 }
 
 class _TodaySectionState extends State<_TodaySection> {
-  // Track the completion state of each habit
-  // true = done, false = not done
-  // Order: Morning Prayer, Bible Reading, Clean Eating,
-  //        30-Min Exercise, Evening Reflection
   final List<bool> _habitStates = [
-    true, // Morning Prayer — done
-    true, // Bible Reading — done
-    false, // Clean Eating — not done yet
-    true, // 30-Min Exercise — done
-    false, // Evening Reflection — not done yet
+    true,
+    true,
+    false,
+    true,
+    false,
   ];
 
   void _toggleHabit(int index) {
@@ -367,16 +342,12 @@ class _HabitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    // Card background becomes slightly green-grey when completed
-    final cardColor = isCompleted
-        ? const Color(0xFFECF3EC) // soft green tint when done
-        : Colors.white.withOpacity(0.72);
+    final cardColor =
+        isCompleted ? const Color(0xFFECF3EC) : Colors.white.withOpacity(0.72);
 
-    // Icon for completion state
     final stateIcon = isCompleted ? '✓' : '○';
-    final stateBg = isCompleted
-        ? const Color(0xFF4F7A45) // green filled
-        : const Color(0xFFE8E8E8); // grey empty circle
+    final stateBg =
+        isCompleted ? const Color(0xFF4F7A45) : const Color(0xFFE8E8E8);
     final stateText = isCompleted ? Colors.white : const Color(0xFFA0A0A0);
 
     return GestureDetector(
@@ -387,7 +358,7 @@ class _HabitCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: isCompleted
-                ? const Color(0x1A4F7A45) // green border when done
+                ? const Color(0x1A4F7A45)
                 : const Color(0x14313A2E),
           ),
           boxShadow: const [
@@ -421,11 +392,10 @@ class _HabitCard extends StatelessWidget {
                     style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
-                      decoration: isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
+                      decoration:
+                          isCompleted ? TextDecoration.lineThrough : null,
                       color: isCompleted
-                          ? const Color(0xFF667063) // muted when done
+                          ? const Color(0xFF667063)
                           : const Color(0xFF1F261E),
                     ),
                   ),
@@ -603,7 +573,6 @@ class _MeetingSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Topline with pill + attendance dots
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -673,73 +642,6 @@ class _AttendanceDot extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(5),
       ),
-    );
-  }
-}
-
-// ---------------- BOTTOM NAV ----------------
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x14313A2E)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(31, 38, 30, 0.10),
-            blurRadius: 45,
-            offset: Offset(0, 18),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          _NavItem(label: 'Today', icon: Icons.today, isActive: true),
-          _NavItem(label: 'Progress', icon: Icons.trending_up),
-          _NavItem(label: 'Group', icon: Icons.groups),
-          _NavItem(label: 'Profile', icon: Icons.person),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isActive;
-
-  const _NavItem({
-    required this.label,
-    required this.icon,
-    this.isActive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive ? OraColors.primary : const Color(0xFF7A8177);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 22, color: color),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
     );
   }
 }
