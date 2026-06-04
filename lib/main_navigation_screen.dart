@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'colors.dart';
 import 'home_screen.dart';
 import 'progress_screen.dart';
+import 'profile_screen.dart';
+import 'group_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -16,8 +18,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     ProgressScreen(),
-    PlaceholderScreen(title: 'Group'),
-    PlaceholderScreen(title: 'Profile'),
+    GroupScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -67,28 +69,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: 'Profile',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-
-  const PlaceholderScreen({
-    super.key,
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '$title screen coming soon',
-        style: const TextStyle(
-          fontSize: 18,
-          color: OraColors.text,
-        ),
       ),
     );
   }
