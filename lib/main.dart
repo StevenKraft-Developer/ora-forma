@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+import 'main_navigation_screen.dart';
 import 'colors.dart'; // Optional: if you want to use the OraColors class for theming
 
 void main() {
@@ -24,7 +24,7 @@ class OraFormaApp extends StatelessWidget {
         scaffoldBackgroundColor: OraColors.background,
         fontFamily: 'Inter',
       ),
-      home: const HomeScreen(),
+      home: const MainNavigationScreen(),
     );
   }
 }
