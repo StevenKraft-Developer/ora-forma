@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../colors.dart';
+import 'colors.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -179,28 +179,149 @@ class _IdentityCard extends StatelessWidget {
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard();
 
+  void _showRemindersSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF7F4ED),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Reminder Settings',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: OraColors.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Choose how Ora Forma helps you stay consistent throughout the day.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF667063),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const _SheetOption(
+                icon: Icons.wb_sunny_outlined,
+                title: 'Morning reminder',
+                subtitle: '6:00 AM · Prayer and scripture',
+              ),
+              const SizedBox(height: 12),
+              const _SheetOption(
+                icon: Icons.restaurant_outlined,
+                title: 'Midday reminder',
+                subtitle: '12:30 PM · Stay disciplined',
+              ),
+              const SizedBox(height: 12),
+              const _SheetOption(
+                icon: Icons.nights_stay_outlined,
+                title: 'Evening reminder',
+                subtitle: '9:00 PM · Reflection and examen',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String label) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label settings coming soon'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return _ProfileSoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           _ProfileRow(
             icon: Icons.notifications_active,
             title: 'Reminders',
             subtitle: 'Daily habit reminders are on',
+            onTap: () => _showRemindersSheet(context),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _ProfileRow(
             icon: Icons.dark_mode,
             title: 'Appearance',
             subtitle: 'System default',
+            onTap: () => _showComingSoon(context, 'Appearance'),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _ProfileRow(
             icon: Icons.menu_book,
             title: 'Rule of Life',
             subtitle: '5 active habits',
+            onTap: () => _showComingSoon(context, 'Rule of Life'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _SheetOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x14313A2E)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: OraColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: OraColors.text,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF667063),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -246,12 +367,14 @@ class _ProfileRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool danger;
+  final VoidCallback? onTap;
 
   const _ProfileRow({
     required this.icon,
     required this.title,
     required this.subtitle,
     this.danger = false,
+    this.onTap,
   });
 
   @override
@@ -259,47 +382,57 @@ class _ProfileRow extends StatelessWidget {
     final titleColor = danger ? const Color(0xFF9A4A3A) : const Color(0xFF1F261E);
     final iconColor = danger ? const Color(0xFF9A4A3A) : OraColors.primary;
 
-    return Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.65),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, color: iconColor, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: titleColor,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF667063),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF667063),
-                ),
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF8B8F87),
               ),
             ],
           ),
         ),
-        const Icon(
-          Icons.chevron_right,
-          color: Color(0xFF8B8F87),
-        ),
-      ],
+      ),
     );
   }
 }
