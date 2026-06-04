@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../colors.dart';
+import 'colors.dart';
 
 class GroupScreen extends StatelessWidget {
   const GroupScreen({super.key});
@@ -36,7 +36,7 @@ class _GroupPhoneScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Expanded(
               child: ListView(
-                children: const [
+                children:  [
                   _GroupHeroCard(),
                   SizedBox(height: 12),
                   _NextMeetingCard(),
@@ -205,31 +205,118 @@ class _GroupStreakCard extends StatelessWidget {
 class _MembersCard extends StatelessWidget {
   const _MembersCard();
 
+  void _showMemberSheet(
+    BuildContext context, {
+    required String name,
+    required String status,
+    required bool isActive,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF7F4ED),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final accentColor =
+            isActive ? const Color(0xFF4F7A45) : const Color(0xFF9B8F78);
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: OraColors.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.circle, size: 10, color: accentColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    status,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF667063),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.72),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0x14313A2E)),
+                ),
+                child: const Text(
+                  'Encourage him this week, keep your commitments, and come prepared for the next meeting.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: OraColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return _SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           _MemberRow(
             initials: 'JG',
             name: 'James',
             status: 'Checked in today',
             isActive: true,
+            onTap: () => _showMemberSheet(
+              context,
+              name: 'James',
+              status: 'Checked in today',
+              isActive: true,
+            ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _MemberRow(
             initials: 'MT',
             name: 'Matthew',
             status: 'Prayer streak: 6 days',
             isActive: true,
+            onTap: () => _showMemberSheet(
+              context,
+              name: 'Matthew',
+              status: 'Prayer streak: 6 days',
+              isActive: true,
+            ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _MemberRow(
             initials: 'LK',
             name: 'Luke',
             status: 'Needs encouragement',
             isActive: false,
+            onTap: () => _showMemberSheet(
+              context,
+              name: 'Luke',
+              status: 'Needs encouragement',
+              isActive: false,
+            ),
           ),
         ],
       ),
@@ -242,61 +329,82 @@ class _MemberRow extends StatelessWidget {
   final String name;
   final String status;
   final bool isActive;
+  final VoidCallback? onTap;
 
   const _MemberRow({
     required this.initials,
     required this.name,
     required this.status,
     required this.isActive,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isActive
-        ? const Color(0xFF4F7A45)
-        : const Color(0xFF9B8F78);
+    final statusColor =
+        isActive ? const Color(0xFF4F7A45) : const Color(0xFF9B8F78);
 
-    return Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initials,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: OraColors.primary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F261E),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: OraColors.primary,
+                  ),
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                status,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF667063)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1F261E),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      status,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF667063),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              Icon(Icons.circle, size: 10, color: statusColor),
+              if (onTap != null) ...[
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF8B8F87),
+                ),
+              ],
             ],
           ),
         ),
-        Icon(Icons.circle, size: 10, color: statusColor),
-      ],
+      ),
     );
   }
 }
