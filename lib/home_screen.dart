@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
+import 'package:provider/provider.dart';
+import 'providers/progress_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -197,33 +199,22 @@ class _HeroCard extends StatelessWidget {
 
 // ---------------- TODAY SECTION & HABITS ----------------
 
-class _TodaySection extends StatefulWidget {
+class _TodaySection extends StatelessWidget {
   const _TodaySection();
-
-  @override
-  State<_TodaySection> createState() => _TodaySectionState();
-}
-
-class _TodaySectionState extends State<_TodaySection> {
-  final List<bool> _habitStates = [
-    true,
-    true,
-    false,
-    true,
-    false,
-  ];
-
-  void _toggleHabit(int index) {
-    setState(() {
-      _habitStates[index] = !_habitStates[index];
-    });
-  }
-
-  int get _completedCount => _habitStates.where((state) => state).length;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final progress = context.watch<ProgressProvider>();
+
+    if (!progress.isLoaded) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final habits = progress.habits;
 
     return Column(
       children: [
@@ -241,7 +232,7 @@ class _TodaySectionState extends State<_TodaySection> {
                 ),
               ),
               Text(
-                '$_completedCount of 5 complete',
+                '${progress.completedCount} of ${progress.totalCount} complete',
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -252,6 +243,7 @@ class _TodaySectionState extends State<_TodaySection> {
           ),
         ),
         const SizedBox(height: 10),
+
         _HabitCard(
           icon: '🙏',
           iconBackground: const LinearGradient(
@@ -259,12 +251,13 @@ class _TodaySectionState extends State<_TodaySection> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          title: 'Morning Prayer',
+          title: habits[0].title,
           subtitle: 'Completed at 6:20 AM · Scripture and intercessions',
-          isCompleted: _habitStates[0],
-          onTap: () => _toggleHabit(0),
+          isCompleted: progress.isHabitCompleted(habits[0].id),
+          onTap: () => context.read<ProgressProvider>().toggleHabit(habits[0].id),
         ),
         const SizedBox(height: 10),
+
         _HabitCard(
           icon: '📖',
           iconBackground: const LinearGradient(
@@ -272,12 +265,13 @@ class _TodaySectionState extends State<_TodaySection> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          title: 'Bible Reading',
+          title: habits[1].title,
           subtitle: '10 minutes today · Gospel of Matthew',
-          isCompleted: _habitStates[1],
-          onTap: () => _toggleHabit(1),
+          isCompleted: progress.isHabitCompleted(habits[1].id),
+          onTap: () => context.read<ProgressProvider>().toggleHabit(habits[1].id),
         ),
         const SizedBox(height: 10),
+
         _HabitCard(
           icon: '🥣',
           iconBackground: const LinearGradient(
@@ -285,12 +279,13 @@ class _TodaySectionState extends State<_TodaySection> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          title: 'Clean Eating',
+          title: habits[2].title,
           subtitle: 'No snacking after 8 PM · Stay intentional today',
-          isCompleted: _habitStates[2],
-          onTap: () => _toggleHabit(2),
+          isCompleted: progress.isHabitCompleted(habits[2].id),
+          onTap: () => context.read<ProgressProvider>().toggleHabit(habits[2].id),
         ),
         const SizedBox(height: 10),
+
         _HabitCard(
           icon: '🏃',
           iconBackground: const LinearGradient(
@@ -298,12 +293,13 @@ class _TodaySectionState extends State<_TodaySection> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          title: '30-Minute Exercise',
+          title: habits[3].title,
           subtitle: 'Completed · Strength and incline walk',
-          isCompleted: _habitStates[3],
-          onTap: () => _toggleHabit(3),
+          isCompleted: progress.isHabitCompleted(habits[3].id),
+          onTap: () => context.read<ProgressProvider>().toggleHabit(habits[3].id),
         ),
         const SizedBox(height: 10),
+
         _HabitCard(
           icon: '🌙',
           iconBackground: const LinearGradient(
@@ -311,10 +307,10 @@ class _TodaySectionState extends State<_TodaySection> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          title: 'Evening Reflection',
+          title: habits[4].title,
           subtitle: 'Still ahead · Quiet review before bed',
-          isCompleted: _habitStates[4],
-          onTap: () => _toggleHabit(4),
+          isCompleted: progress.isHabitCompleted(habits[4].id),
+          onTap: () => context.read<ProgressProvider>().toggleHabit(habits[4].id),
         ),
       ],
     );
