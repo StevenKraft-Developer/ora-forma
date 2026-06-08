@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'main_navigation_screen.dart';
-import 'colors.dart'; // Optional: if you want to use the OraColors class for theming
+import 'colors.dart';
+import 'providers/progress_provider.dart';
+import 'services/progress_storage.dart';
 
 void main() {
-  runApp(const OraFormaApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ProgressProvider(ProgressStorage())..loadTodayProgress(),
+      child: const OraFormaApp(),
+    ),
+  );
 }
 
 class OraFormaApp extends StatelessWidget {
