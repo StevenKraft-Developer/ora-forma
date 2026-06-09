@@ -6,72 +6,115 @@ class GroupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: const _GroupPhoneScreen(),
-      ),
-    );
-  }
-}
+    final textTheme = Theme.of(context).textTheme;
 
-class _GroupPhoneScreen extends StatelessWidget {
-  const _GroupPhoneScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF7F4ED), Color(0xFFEFE8DB)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-        child: Column(
+    return Scaffold(
+      backgroundColor: OraColors.background,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
           children: [
-            const _GroupStatusRow(),
+            const _GroupHeroCard(),
+            const SizedBox(height: 20),
+            Text(
+              'Brotherhood',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
             const SizedBox(height: 8),
-            Expanded(
-              child: ListView(
-                children:  [
-                  _GroupHeroCard(),
-                  SizedBox(height: 12),
-                  _NextMeetingCard(),
-                  SizedBox(height: 12),
-                  _GroupStreakCard(),
-                  SizedBox(height: 12),
-                  _MembersCard(),
-                  SizedBox(height: 16),
+            Text(
+              'Stay connected with the men walking this path with you.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: OraColors.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const _SectionCard(
+              child: Column(
+                children: [
+                  _GroupMemberTile(
+                    icon: Icons.shield_outlined,
+                    name: 'Michael R.',
+                    status: 'Completed 4 of 5 habits today',
+                    trailingText: 'Strong',
+                  ),
+                  Divider(height: 1),
+                  _GroupMemberTile(
+                    icon: Icons.auto_awesome_outlined,
+                    name: 'David L.',
+                    status: 'Prayed the Rosary this morning',
+                    trailingText: 'Focused',
+                  ),
+                  Divider(height: 1),
+                  _GroupMemberTile(
+                    icon: Icons.menu_book_outlined,
+                    name: 'Anthony C.',
+                    status: 'Shared a scripture reflection',
+                    trailingText: 'Active',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Challenges',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const _ChallengeCard(
+              title: '7-Day Morning Prayer',
+              subtitle: 'Join 8 men committing to consistent prayer before work.',
+              icon: Icons.wb_sunny_outlined,
+              accentColor: OraColors.primary,
+            ),
+            const SizedBox(height: 12),
+            const _ChallengeCard(
+              title: 'Scripture Before Screen Time',
+              subtitle: 'Read one short passage before opening social media.',
+              icon: Icons.phone_disabled_outlined,
+              accentColor: OraColors.gold,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Community',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const _SectionCard(
+              child: Column(
+                children: [
+                  _SimpleActionTile(
+                    icon: Icons.forum_outlined,
+                    title: 'Group Discussion',
+                    subtitle: '3 new reflections shared today',
+                  ),
+                  Divider(height: 1),
+                  _SimpleActionTile(
+                    icon: Icons.event_outlined,
+                    title: 'Next Meeting',
+                    subtitle: 'Thursday at 7:00 PM',
+                  ),
+                  Divider(height: 1),
+                  _SimpleActionTile(
+                    icon: Icons.volunteer_activism_outlined,
+                    title: 'Prayer Intentions',
+                    subtitle: '5 intentions from the group this week',
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _GroupStatusRow extends StatelessWidget {
-  const _GroupStatusRow();
-
-  @override
-  Widget build(BuildContext context) {
-    const textStyle = TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF2F352F),
-    );
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: const [
-        Text('9:41', style: textStyle),
-        Text('●●●  5G  🔋', style: textStyle),
-      ],
     );
   }
 }
@@ -84,397 +127,262 @@ class _GroupHeroCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
-          colors: [OraColors.primary, OraColors.primaryDeep],
+          colors: [
+            OraColors.primary,
+            OraColors.primaryDeep,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Brotherhood',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Stay accountable, prepare for the next meeting, and walk with your group in discipline.',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.white.withOpacity(0.82),
-                  height: 1.4,
-                ),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: OraColors.primary.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ora Forma Group',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: Colors.white.withOpacity(0.82),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Grow stronger together.',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Encourage one another, stay accountable, and build habits that last.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.88),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.14),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.18),
+              ),
+            ),
+            child: const Icon(
+              Icons.groups_2_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NextMeetingCard extends StatelessWidget {
-  const _NextMeetingCard();
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+
+  const _SectionCard({
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: OraColors.surface,
+      child: child,
+    );
+  }
+}
+
+class _GroupMemberTile extends StatelessWidget {
+  final IconData icon;
+  final String name;
+  final String status;
+  final String trailingText;
+
+  const _GroupMemberTile({
+    required this.icon,
+    required this.name,
+    required this.status,
+    required this.trailingText,
+  });
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return _SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Next Meeting'.toUpperCase(),
-            style: textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              letterSpacing: 0.12,
-              color: const Color(0xFF606A5F),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Thursday · June 12 · 7:00 PM',
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: OraColors.primary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Shared meal, discussion, and commitments for the next month.',
-            style: textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              height: 1.5,
-              color: const Color(0xFF667063),
-            ),
-          ),
-        ],
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 20,
+        backgroundColor: OraColors.primary.withOpacity(0.12),
+        child: Icon(
+          icon,
+          color: OraColors.primary,
+          size: 20,
+        ),
       ),
-    );
-  }
-}
-
-class _GroupStreakCard extends StatelessWidget {
-  const _GroupStreakCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _SoftCard(
-      child: Row(
-        children: const [
-          Expanded(
-            child: _MiniMetric(
-              value: '8',
-              label: 'Active men',
-              icon: Icons.groups,
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: _MiniMetric(
-              value: '4 wk',
-              label: 'Shared streak',
-              icon: Icons.local_fire_department,
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: _MiniMetric(
-              value: '92%',
-              label: 'Check-ins',
-              icon: Icons.check_circle,
-            ),
-          ),
-        ],
+      title: Text(
+        name,
+        style: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: OraColors.text,
+        ),
       ),
-    );
-  }
-}
-
-class _MembersCard extends StatelessWidget {
-  const _MembersCard();
-
-  void _showMemberSheet(
-    BuildContext context, {
-    required String name,
-    required String status,
-    required bool isActive,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFFF7F4ED),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      subtitle: Text(
+        status,
+        style: textTheme.bodySmall?.copyWith(
+          color: OraColors.muted,
+          height: 1.35,
+        ),
       ),
-      builder: (context) {
-        final accentColor =
-            isActive ? const Color(0xFF4F7A45) : const Color(0xFF9B8F78);
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: OraColors.text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.circle, size: 10, color: accentColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    status,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF667063),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.72),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x14313A2E)),
-                ),
-                child: const Text(
-                  'Encourage him this week, keep your commitments, and come prepared for the next meeting.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: OraColors.text,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SoftCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MemberRow(
-            initials: 'JG',
-            name: 'James',
-            status: 'Checked in today',
-            isActive: true,
-            onTap: () => _showMemberSheet(
-              context,
-              name: 'James',
-              status: 'Checked in today',
-              isActive: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _MemberRow(
-            initials: 'MT',
-            name: 'Matthew',
-            status: 'Prayer streak: 6 days',
-            isActive: true,
-            onTap: () => _showMemberSheet(
-              context,
-              name: 'Matthew',
-              status: 'Prayer streak: 6 days',
-              isActive: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _MemberRow(
-            initials: 'LK',
-            name: 'Luke',
-            status: 'Needs encouragement',
-            isActive: false,
-            onTap: () => _showMemberSheet(
-              context,
-              name: 'Luke',
-              status: 'Needs encouragement',
-              isActive: false,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MemberRow extends StatelessWidget {
-  final String initials;
-  final String name;
-  final String status;
-  final bool isActive;
-  final VoidCallback? onTap;
-
-  const _MemberRow({
-    required this.initials,
-    required this.name,
-    required this.status,
-    required this.isActive,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final statusColor =
-        isActive ? const Color(0xFF4F7A45) : const Color(0xFF9B8F78);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: OraColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F261E),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      status,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF667063),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.circle, size: 10, color: statusColor),
-              if (onTap != null) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF8B8F87),
-                ),
-              ],
-            ],
-          ),
+      trailing: Text(
+        trailingText,
+        style: textTheme.labelMedium?.copyWith(
+          color: OraColors.primary,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 }
 
-class _MiniMetric extends StatelessWidget {
-  final String value;
-  final String label;
+class _ChallengeCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
   final IconData icon;
+  final Color accentColor;
 
-  const _MiniMetric({
-    required this.value,
-    required this.label,
+  const _ChallengeCard({
+    required this.title,
+    required this.subtitle,
     required this.icon,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.54),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x0D313A2E)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: OraColors.primary, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: OraColors.primary,
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      color: OraColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: accentColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF667063)),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: OraColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: OraColors.muted,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'View challenge',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: accentColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SoftCard extends StatelessWidget {
-  final Widget child;
+class _SimpleActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
-  const _SoftCard({required this.child});
+  const _SimpleActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0x14313A2E)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(31, 38, 30, 0.10),
-            blurRadius: 45,
-            offset: Offset(0, 18),
-          ),
-        ],
+    final textTheme = Theme.of(context).textTheme;
+
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: OraColors.primary,
       ),
-      padding: const EdgeInsets.all(18),
-      child: child,
+      title: Text(
+        title,
+        style: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: OraColors.text,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: textTheme.bodySmall?.copyWith(
+          color: OraColors.muted,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        color: OraColors.muted,
+      ),
     );
   }
 }

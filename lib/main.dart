@@ -20,18 +20,38 @@ class OraFormaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final base = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: OraColors.primary,
+        brightness: Brightness.light,
+      ),
+      scaffoldBackgroundColor: OraColors.background,
+      fontFamily: 'Inter',
+    );
+
     return MaterialApp(
       title: 'Ora Forma',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: OraColors.primary,
-          brightness: Brightness.light,
-          background: OraColors.background,
+      theme: base.copyWith(
+        textTheme: base.textTheme.apply(
+          bodyColor: OraColors.text,
+          displayColor: OraColors.text,
         ),
-        scaffoldBackgroundColor: OraColors.background,
-        fontFamily: 'Inter',
+        cardTheme: CardThemeData(
+          color: OraColors.surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 2,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        dividerColor: OraColors.background,
+        listTileTheme: const ListTileThemeData(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          iconColor: OraColors.primary,
+        ),
       ),
       home: const MainNavigationScreen(),
     );
