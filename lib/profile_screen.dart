@@ -1,54 +1,176 @@
 import 'package:flutter/material.dart';
-import 'colors.dart';
+import 'package:provider/provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+import 'colors.dart';
+import 'providers/progress_provider.dart';
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: const _ProfilePhoneScreen(),
-      ),
-    );
-  }
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfilePhoneScreen extends StatelessWidget {
-  const _ProfilePhoneScreen();
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _notificationsEnabled = true;
+  bool _dailyReminderEnabled = true;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF7F4ED), Color(0xFFEFE8DB)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: Column(
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
           children: [
-            const _ProfileStatusRow(),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView(
-                children: const [
-                  _ProfileHeroCard(),
-                  SizedBox(height: 12),
-                  _IdentityCard(),
-                  SizedBox(height: 12),
-                  _RuleOfLifeCard(),
-                  SizedBox(height: 12),
-                  _StatsOverviewCard(),
-                  SizedBox(height: 12),
-                  _SettingsCard(),
-                  SizedBox(height: 12),
-                  _AccountCard(),
-                  SizedBox(height: 16),
+            const _ProfileHeaderCard(),
+            const SizedBox(height: 20),
+
+            Text(
+              'Preferences',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile.adaptive(
+                    value: _notificationsEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _notificationsEnabled = value;
+                      });
+                    },
+                    title: const Text('Notifications'),
+                    subtitle: const Text('Receive encouragement and app updates'),
+                    secondary: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: OraColors.primary,
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile.adaptive(
+                    value: _dailyReminderEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _dailyReminderEnabled = value;
+                      });
+                    },
+                    title: const Text('Daily Reminder'),
+                    subtitle: const Text('Stay consistent with your daily check-in'),
+                    secondary: const Icon(
+                      Icons.alarm_rounded,
+                      color: OraColors.gold,
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  _SettingsTile(
+                    icon: Icons.palette_outlined,
+                    iconColor: OraColors.primary,
+                    title: 'Appearance',
+                    subtitle: 'Light mode for now',
+                    onTap: () {
+                      _showSimpleSheet(
+                        context,
+                        title: 'Appearance',
+                        message:
+                            'Theme settings can be wired in once dark mode or theme preferences are added.',
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              'Account',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Card(
+              child: Column(
+                children: [
+                  _SettingsTile(
+                    icon: Icons.person_outline_rounded,
+                    iconColor: OraColors.primary,
+                    title: 'Profile Details',
+                    subtitle: 'Name, email, and account info',
+                    onTap: () {
+                      _showSimpleSheet(
+                        context,
+                        title: 'Profile Details',
+                        message:
+                            'Profile editing can be connected once user accounts are added.',
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  _SettingsTile(
+                    icon: Icons.info_outline_rounded,
+                    iconColor: OraColors.gold,
+                    title: 'About Ora Forma',
+                    subtitle: 'Version, mission, and app information',
+                    onTap: () {
+                      _showSimpleSheet(
+                        context,
+                        title: 'About Ora Forma',
+                        message:
+                            'Ora Forma is your Catholic habit companion for consistency, discipline, and formation.',
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  _SettingsTile(
+                    icon: Icons.help_outline_rounded,
+                    iconColor: OraColors.muted,
+                    title: 'Help & Support',
+                    subtitle: 'Get help with using the app',
+                    onTap: () {
+                      _showSimpleSheet(
+                        context,
+                        title: 'Help & Support',
+                        message:
+                            'Support options can be added later, such as email, FAQ, or mentor resources.',
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              'Danger Zone',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Card(
+              child: Column(
+                children: [
+                  _SettingsTile(
+                    icon: Icons.restart_alt_rounded,
+                    iconColor: OraColors.destructive,
+                    title: 'Reset Progress',
+                    subtitle: 'Clear saved habits and history',
+                    destructive: true,
+                    onTap: () => _confirmResetProgress(context),
+                  ),
                 ],
               ),
             ),
@@ -57,41 +179,114 @@ class _ProfilePhoneScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _ProfileStatusRow extends StatelessWidget {
-  const _ProfileStatusRow();
+  Future<void> _confirmResetProgress(BuildContext context) async {
+    final provider = context.read<ProgressProvider>();
 
-  @override
-  Widget build(BuildContext context) {
-    const textStyle = TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF2F352F),
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Reset Progress?'),
+              content: const Text(
+                'This will permanently clear your saved habit progress and history on this device.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    'Reset',
+                    style: TextStyle(color: OraColors.destructive),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed || !mounted) return;
+
+    await provider.clearAllProgress();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Progress reset successfully.'),
+      ),
     );
+  }
 
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text('9:41', style: textStyle),
-        Text('●●●  5G  🔋', style: textStyle),
-      ],
+  void _showSimpleSheet(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final textTheme = Theme.of(context).textTheme;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: OraColors.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: OraColors.muted,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-class _ProfileHeroCard extends StatelessWidget {
-  const _ProfileHeroCard();
+class _ProfileHeaderCard extends StatelessWidget {
+  const _ProfileHeaderCard();
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [OraColors.primary, OraColors.primaryDeep],
+          colors: [
+            OraColors.primary,
+            OraColors.primaryDeep,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -103,253 +298,46 @@ class _ProfileHeroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.white24,
-              child: Icon(Icons.person, color: OraColors.gold, size: 30),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Profile',
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Your personal rule of life, settings, and account details in one place.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      height: 1.4,
-                      color: Colors.white.withOpacity(0.82),
-                    ),
-                  ),
-                ],
+      child: Row(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.14),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.18),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IdentityCard extends StatelessWidget {
-  const _IdentityCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 62,
-              height: 62,
-              decoration: const BoxDecoration(
-                color: OraColors.primarySoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.shield_outlined,
-                color: OraColors.primary,
-                size: 30,
-              ),
+            child: const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 34,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Steven',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: OraColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Building a daily Catholic rule of life',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: OraColors.muted,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const _TagChip(label: 'Ora Forma member'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RuleOfLifeCard extends StatelessWidget {
-  const _RuleOfLifeCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Rule of Life',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'The commitments shaping your day',
-              style: textTheme.bodySmall?.copyWith(color: OraColors.muted),
-            ),
-            const SizedBox(height: 16),
-            const _RuleLine(
-              icon: Icons.auto_stories_outlined,
-              title: 'Daily prayer',
-              subtitle: 'Begin and end each day with prayer',
-            ),
-            const SizedBox(height: 12),
-            const _RuleLine(
-              icon: Icons.bolt_outlined,
-              title: 'Discipline',
-              subtitle: 'Practice consistency in habits and routines',
-            ),
-            const SizedBox(height: 12),
-            const _RuleLine(
-              icon: Icons.groups_outlined,
-              title: 'Brotherhood',
-              subtitle: 'Stay accountable and connected',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatsOverviewCard extends StatelessWidget {
-  const _StatsOverviewCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Overview',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'A snapshot of your current journey',
-              style: textTheme.bodySmall?.copyWith(color: OraColors.muted),
-            ),
-            const SizedBox(height: 16),
-            const Row(
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _ProfileStatCard(
-                    icon: Icons.local_fire_department,
-                    label: 'Current Streak',
-                    value: '4 days',
-                    color: OraColors.gold,
+                Text(
+                  'Your Profile',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _ProfileStatCard(
-                    icon: Icons.emoji_events,
-                    label: 'Best Streak',
-                    value: '9 days',
-                    color: OraColors.success,
+                const SizedBox(height: 6),
+                Text(
+                  'Manage your preferences, account details, and app settings.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.88),
+                    height: 1.45,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Row(
-              children: [
-                Expanded(
-                  child: _ProfileStatCard(
-                    icon: Icons.check_circle_outline,
-                    label: 'Habits',
-                    value: '5 active',
-                    color: OraColors.primary,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _ProfileStatCard(
-                    icon: Icons.groups_2_outlined,
-                    label: 'Group',
-                    value: '1 circle',
-                    color: OraColors.gold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: Column(
-        children: [
-          _ProfileActionTile(
-            icon: Icons.notifications_none,
-            title: 'Reminders',
-            subtitle: 'Daily prompts and accountability nudges',
-          ),
-          Divider(height: 1, color: OraColors.background),
-          _ProfileActionTile(
-            icon: Icons.palette_outlined,
-            title: 'Appearance',
-            subtitle: 'Theme, colors, and display preferences',
-          ),
-          Divider(height: 1, color: OraColors.background),
-          _ProfileActionTile(
-            icon: Icons.lock_outline,
-            title: 'Privacy',
-            subtitle: 'Control your account visibility and sharing',
           ),
         ],
       ),
@@ -357,204 +345,50 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-class _AccountCard extends StatelessWidget {
-  const _AccountCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      child: Column(
-        children: [
-          _ProfileActionTile(
-            icon: Icons.badge_outlined,
-            title: 'Account details',
-            subtitle: 'View and update your personal information',
-          ),
-          Divider(height: 1, color: OraColors.background),
-          _ProfileActionTile(
-            icon: Icons.help_outline,
-            title: 'Help and support',
-            subtitle: 'Get help with the app and your account',
-          ),
-          Divider(height: 1, color: OraColors.background),
-          _ProfileActionTile(
-            icon: Icons.logout,
-            title: 'Sign out',
-            subtitle: 'Leave your Ora Forma session',
-            isDestructive: true,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  final String label;
-
-  const _TagChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: OraColors.gold.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: OraColors.gold,
-        ),
-      ),
-    );
-  }
-}
-
-class _RuleLine extends StatelessWidget {
+class _SettingsTile extends StatelessWidget {
   final IconData icon;
+  final Color iconColor;
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
 
-  const _RuleLine({
+  const _SettingsTile({
     required this.icon,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: const BoxDecoration(
-            color: OraColors.primarySoft,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: OraColors.primary, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: OraColors.text,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: OraColors.muted,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProfileStatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _ProfileStatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: OraColors.background,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: OraColors.muted,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: OraColors.text,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool isDestructive;
-
-  const _ProfileActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.isDestructive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final titleColor = isDestructive ? OraColors.destructive : OraColors.text;
-    final iconColor = isDestructive ? OraColors.destructive : OraColors.primary;
+    final textTheme = Theme.of(context).textTheme;
 
     return ListTile(
-      leading: Icon(icon, color: iconColor),
+      onTap: onTap,
+      leading: Icon(
+        icon,
+        color: iconColor,
+      ),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: titleColor,
+        style: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: destructive ? OraColors.destructive : OraColors.text,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(fontSize: 13, color: OraColors.muted),
+        style: textTheme.bodySmall?.copyWith(
+          color: OraColors.muted,
+        ),
       ),
       trailing: Icon(
-        Icons.chevron_right,
-        color: isDestructive ? OraColors.destructive : OraColors.muted,
+        Icons.chevron_right_rounded,
+        color: destructive ? OraColors.destructive : OraColors.muted,
       ),
-      onTap: () {},
     );
   }
 }
