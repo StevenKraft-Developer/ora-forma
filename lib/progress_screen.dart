@@ -95,7 +95,7 @@ class _ProgressPhoneScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: StatCard(
-                          title: 'Completion',
+                          title: 'Today Rate',
                           value: '${(completionPercent * 100).round()}%',
                           icon: Icons.insights,
                           iconColor: OraColors.primary,
@@ -114,20 +114,9 @@ class _ProgressPhoneScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   HabitStreaksCard(habits: progress.habits),
                   const SizedBox(height: 12),
-                  TodayProgressCard(
-                    completedCount: completedCount,
-                    totalCount: totalCount,
-                    completionPercent: completionPercent,
-                  ),
-                  const SizedBox(height: 12),
-                  TodayHabitsCard(
-                    habits: progress.habits,
-                    completedHabitIds: progress.completedHabitIds,
-                  ),
-                  const SizedBox(height: 12),
                   InsightCard(
                     message:
-                        'You completed $completedThisWeek of $totalThisWeek habits so far this week. Keep stacking small wins with consistency.',
+                        'You completed $completedThisWeek of $totalThisWeek habits this week. Faithful routines are built one day at a time.',
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -198,7 +187,7 @@ class _ProgressHeroCard extends StatelessWidget {
                 'Review streaks, weekly consistency, and the habits that are shaping your rule of life.',
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   height: 1.4,
                 ),
               ),
@@ -291,7 +280,7 @@ class WeeklyProgressCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Weekly Progress',
+              'This Week\'s Progress',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -385,7 +374,7 @@ class WeeklyCard extends StatelessWidget {
                               ? OraColors.primary
                               : completed
                               ? OraColors.gold
-                              : OraColors.muted.withOpacity(0.35),
+                              : OraColors.muted.withValues(alpha: 0.35),
                           width: isToday ? 2 : 1.5,
                         ),
                         shape: BoxShape.circle,
@@ -419,10 +408,7 @@ class WeeklyCard extends StatelessWidget {
 class HabitStreaksCard extends StatelessWidget {
   final List<Habit> habits;
 
-  const HabitStreaksCard({
-    super.key,
-    required this.habits,
-  });
+  const HabitStreaksCard({super.key, required this.habits});
 
   @override
   Widget build(BuildContext context) {
@@ -434,9 +420,7 @@ class HabitStreaksCard extends StatelessWidget {
     return Card(
       color: OraColors.surface,
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -453,16 +437,15 @@ class HabitStreaksCard extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               'Track consistency for each habit and your full rule of life together',
-              style: TextStyle(
-                fontSize: 14,
-                color: OraColors.muted,
-              ),
+              style: TextStyle(fontSize: 14, color: OraColors.muted),
             ),
             const SizedBox(height: 16),
             ...habits.map((habit) {
               final currentStreak = progress.currentStreakForHabit(habit.id);
               final bestStreak = progress.longestStreakForHabit(habit.id);
-              final isActiveToday = progress.completedHabitIds.contains(habit.id);
+              final isActiveToday = progress.completedHabitIds.contains(
+                habit.id,
+              );
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -476,8 +459,8 @@ class HabitStreaksCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isActiveToday
-                          ? OraColors.gold.withOpacity(0.45)
-                          : OraColors.muted.withOpacity(0.18),
+                          ? OraColors.gold.withValues(alpha: 0.45)
+                          : OraColors.muted.withValues(alpha: 0.18),
                     ),
                   ),
                   child: Row(
@@ -487,8 +470,8 @@ class HabitStreaksCard extends StatelessWidget {
                         height: 38,
                         decoration: BoxDecoration(
                           color: isActiveToday
-                              ? OraColors.gold.withOpacity(0.16)
-                              : OraColors.primary.withOpacity(0.08),
+                              ? OraColors.gold.withValues(alpha: 0.16)
+                              : OraColors.primary.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -579,13 +562,10 @@ class HabitStreaksCard extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
             const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [OraColors.primary, OraColors.primaryDeep],
@@ -600,7 +580,7 @@ class HabitStreaksCard extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.14),
+                      color: Colors.white.withValues(alpha: 0.14),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -683,144 +663,6 @@ class HabitStreaksCard extends StatelessWidget {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class TodayProgressCard extends StatelessWidget {
-  final int completedCount;
-  final int totalCount;
-  final double completionPercent;
-
-  const TodayProgressCard({
-    super.key,
-    required this.completedCount,
-    required this.totalCount,
-    required this.completionPercent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final progressPercent = (completionPercent * 100).round();
-
-    return Card(
-      color: OraColors.surface,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Today’s Progress',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$completedCount of $totalCount habits completed',
-              style: const TextStyle(fontSize: 14, color: OraColors.muted),
-            ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: completionPercent.clamp(0.0, 1.0),
-                minHeight: 10,
-                backgroundColor: OraColors.background,
-                valueColor: const AlwaysStoppedAnimation<Color>(OraColors.gold),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '$progressPercent% complete',
-              style: const TextStyle(
-                fontSize: 14,
-                color: OraColors.text,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class TodayHabitsCard extends StatelessWidget {
-  final List<Habit> habits;
-  final List<String> completedHabitIds;
-
-  const TodayHabitsCard({
-    super.key,
-    required this.habits,
-    required this.completedHabitIds,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: OraColors.surface,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Today’s Habits',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Your current rule of life progress',
-              style: TextStyle(fontSize: 14, color: OraColors.muted),
-            ),
-            const SizedBox(height: 16),
-            ...habits.map((habit) {
-              final isCompleted = completedHabitIds.contains(habit.id);
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Icon(
-                      isCompleted
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: isCompleted ? OraColors.success : OraColors.muted,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        habit.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isCompleted ? OraColors.muted : OraColors.text,
-                          decoration: isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
           ],
         ),
       ),

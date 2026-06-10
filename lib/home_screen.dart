@@ -151,7 +151,7 @@ class _HeroCard extends StatelessWidget {
                 'Begin with prayer, keep watch over your habits, and stay rooted in discipline.',
                 style: TextStyle(
                   fontSize: 15,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   height: 1.4,
                 ),
               ),
@@ -339,7 +339,7 @@ class _HabitCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final cardColor =
-        isCompleted ? const Color(0xFFECF3EC) : Colors.white.withOpacity(0.72);
+        isCompleted ? const Color(0xFFECF3EC) : Colors.white.withValues(alpha: 0.72);
 
     final stateIcon = isCompleted ? '✓' : '○';
     final stateBg =
@@ -442,7 +442,7 @@ class _WeeklySection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0x14313A2E)),
         boxShadow: const [
@@ -512,7 +512,7 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.54),
+        color: Colors.white.withValues(alpha: 0.54),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0x0D313A2E)),
       ),
@@ -578,7 +578,7 @@ class _MeetingSection extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(

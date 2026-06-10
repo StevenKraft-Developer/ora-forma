@@ -94,7 +94,7 @@ class _GroupScreenState extends State<GroupScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _groups.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, index) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final group = _groups[index];
                   final isSelected = index == _selectedGroupIndex;
@@ -298,13 +298,13 @@ class _GroupSelectorCard extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? group.accentColor
-                : OraColors.primary.withOpacity(0.08),
+                : OraColors.primary.withValues(alpha: 0.08),
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? group.accentColor.withOpacity(0.18)
-                  : Colors.black.withOpacity(0.04),
+                  ? group.accentColor.withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),
@@ -331,7 +331,7 @@ class _GroupSelectorCard extends StatelessWidget {
               group.subtitle,
               style: textTheme.bodySmall?.copyWith(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.86)
+                    ? Colors.white.withValues(alpha: 0.86)
                     : OraColors.muted,
                 height: 1.35,
               ),
@@ -374,7 +374,7 @@ class _GroupHeroCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: group.accentColor.withOpacity(0.18),
+            color: group.accentColor.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -390,7 +390,7 @@ class _GroupHeroCard extends StatelessWidget {
                 Text(
                   group.name,
                   style: textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withOpacity(0.82),
+                    color: Colors.white.withValues(alpha: 0.82),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.3,
                   ),
@@ -410,7 +410,7 @@ class _GroupHeroCard extends StatelessWidget {
                       ? 'You have completed $completedToday of $totalHabits habits today and are on a $currentStreak-day streak in this season of brotherhood.'
                       : 'You have completed $completedToday of $totalHabits habits today. Start building momentum with ${group.name}.',
                   style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.88),
+                    color: Colors.white.withValues(alpha: 0.88),
                     height: 1.5,
                   ),
                 ),
@@ -422,10 +422,10 @@ class _GroupHeroCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
+              color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.18),
+                color: Colors.white.withValues(alpha: 0.18),
               ),
             ),
             child: Icon(
@@ -478,7 +478,7 @@ class _GroupMemberTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         radius: 20,
-        backgroundColor: iconColor.withOpacity(0.12),
+        backgroundColor: iconColor.withValues(alpha: 0.12),
         child: Icon(
           icon,
           color: iconColor,
@@ -538,7 +538,7 @@ class _ChallengeCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.12),
+                color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(

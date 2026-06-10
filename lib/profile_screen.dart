@@ -47,7 +47,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       });
                     },
                     title: const Text('Notifications'),
-                    subtitle: const Text('Receive encouragement and app updates'),
+                    subtitle: const Text(
+                      'Receive encouragement and app updates',
+                    ),
                     secondary: const Icon(
                       Icons.notifications_none_rounded,
                       color: OraColors.primary,
@@ -62,7 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       });
                     },
                     title: const Text('Daily Reminder'),
-                    subtitle: const Text('Stay consistent with your daily check-in'),
+                    subtitle: const Text(
+                      'Stay consistent with your daily check-in',
+                    ),
                     secondary: const Icon(
                       Icons.alarm_rounded,
                       color: OraColors.gold,
@@ -169,7 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Reset Progress',
                     subtitle: 'Clear saved habits and history',
                     destructive: true,
-                    onTap: () => _confirmResetProgress(context),
+                    onTap: _confirmResetProgress,
                   ),
                 ],
               ),
@@ -180,13 +184,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _confirmResetProgress(BuildContext context) async {
+  Future<void> _confirmResetProgress() async {
     final provider = context.read<ProgressProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
     final confirmed =
         await showDialog<bool>(
           context: context,
-          builder: (context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('Reset Progress?'),
               content: const Text(
@@ -194,11 +199,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.pop(dialogContext, false),
                   child: const Text('Cancel'),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(dialogContext, true),
                   child: const Text(
                     'Reset',
                     style: TextStyle(color: OraColors.destructive),
@@ -216,10 +221,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Progress reset successfully.'),
-      ),
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Progress reset successfully.')),
     );
   }
 
@@ -283,16 +286,13 @@ class _ProfileHeaderCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [
-            OraColors.primary,
-            OraColors.primaryDeep,
-          ],
+          colors: [OraColors.primary, OraColors.primaryDeep],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: OraColors.primary.withOpacity(0.18),
+            color: OraColors.primary.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -304,11 +304,9 @@ class _ProfileHeaderCard extends StatelessWidget {
             width: 68,
             height: 68,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
+              color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.18),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
             child: const Icon(
               Icons.person_rounded,
@@ -332,7 +330,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 Text(
                   'Manage your preferences, account details, and app settings.',
                   style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.88),
+                    color: Colors.white.withValues(alpha: 0.88),
                     height: 1.45,
                   ),
                 ),
@@ -368,10 +366,7 @@ class _SettingsTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      leading: Icon(
-        icon,
-        color: iconColor,
-      ),
+      leading: Icon(icon, color: iconColor),
       title: Text(
         title,
         style: textTheme.titleMedium?.copyWith(
@@ -381,9 +376,7 @@ class _SettingsTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: textTheme.bodySmall?.copyWith(
-          color: OraColors.muted,
-        ),
+        style: textTheme.bodySmall?.copyWith(color: OraColors.muted),
       ),
       trailing: Icon(
         Icons.chevron_right_rounded,
