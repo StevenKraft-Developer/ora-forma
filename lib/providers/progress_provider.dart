@@ -333,4 +333,22 @@ class ProgressProvider extends ChangeNotifier {
     final day = date.day.toString().padLeft(2, '0');
     return '${date.year}-$month-$day';
   }
+
+  Future<void> clearAllProgress() async {
+  _completedHabitIds = [];
+  _historyByDate = {};
+  await _storage.clearAllProgressHistory();
+
+  _historyByDate[todayKey] = DailyProgress(
+    dateKey: todayKey,
+    completedHabitIds: [],
+  );
+
+  await _storage.saveTodayProgress(
+    dateKey: todayKey,
+    completedHabitIds: [],
+  );
+
+  notifyListeners();
+}
 }
