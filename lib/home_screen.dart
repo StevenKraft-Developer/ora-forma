@@ -18,7 +18,6 @@ class HomeScreen extends StatelessWidget {
 }
 
 // ---------------- PHONE SCREEN ----------------
-
 class _PhoneScreen extends StatelessWidget {
   const _PhoneScreen();
 
@@ -71,12 +70,11 @@ class _StatusRow extends StatelessWidget {
       fontWeight: FontWeight.w600,
       color: Color(0xFF2F352F),
     );
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: const [
         Text('9:41', style: textStyle),
-        Text('●●●  5G  🔋', style: textStyle),
+        Text('*** 5G **', style: textStyle),
       ],
     );
   }
@@ -88,7 +86,6 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -112,7 +109,7 @@ class _HeroCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Friday · Ordinary Time',
+                    'Friday * Ordinary Time',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -173,8 +170,7 @@ class _HeroCard extends StatelessWidget {
                     ),
                     children: [
                       const TextSpan(
-                        text:
-                            '"Be watchful, stand firm in the faith, act like men, be strong."',
+                        text: '"Be watchful, stand firm in the faith, act like men, be strong."',
                         style: TextStyle(fontWeight: FontWeight.w500),
                       ),
                       const TextSpan(text: ' '),
@@ -198,7 +194,6 @@ class _HeroCard extends StatelessWidget {
 }
 
 // ---------------- TODAY SECTION & HABITS ----------------
-
 class _TodaySection extends StatelessWidget {
   const _TodaySection();
 
@@ -224,7 +219,7 @@ class _TodaySection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Today’s rule of life'.toUpperCase(),
+                'Today's rule of life'.toUpperCase(),
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 13,
                   letterSpacing: 0.12,
@@ -243,7 +238,6 @@ class _TodaySection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-
         _HabitCard(
           icon: '🙏',
           iconBackground: const LinearGradient(
@@ -252,12 +246,11 @@ class _TodaySection extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           title: habits[0].title,
-          subtitle: 'Completed at 6:20 AM · Scripture and intercessions',
+          subtitle: 'Completed at 6:20 AM * Scripture and intercessions',
           isCompleted: progress.isHabitCompleted(habits[0].id),
           onTap: () => context.read<ProgressProvider>().toggleHabit(habits[0].id),
         ),
         const SizedBox(height: 10),
-
         _HabitCard(
           icon: '📖',
           iconBackground: const LinearGradient(
@@ -266,12 +259,11 @@ class _TodaySection extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           title: habits[1].title,
-          subtitle: '10 minutes today · Gospel of Matthew',
+          subtitle: '10 minutes today * Gospel of Matthew',
           isCompleted: progress.isHabitCompleted(habits[1].id),
           onTap: () => context.read<ProgressProvider>().toggleHabit(habits[1].id),
         ),
         const SizedBox(height: 10),
-
         _HabitCard(
           icon: '🥣',
           iconBackground: const LinearGradient(
@@ -280,12 +272,11 @@ class _TodaySection extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           title: habits[2].title,
-          subtitle: 'No snacking after 8 PM · Stay intentional today',
+          subtitle: 'No snacking after 8 PM * Stay intentional today',
           isCompleted: progress.isHabitCompleted(habits[2].id),
           onTap: () => context.read<ProgressProvider>().toggleHabit(habits[2].id),
         ),
         const SizedBox(height: 10),
-
         _HabitCard(
           icon: '🏃',
           iconBackground: const LinearGradient(
@@ -294,12 +285,11 @@ class _TodaySection extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           title: habits[3].title,
-          subtitle: 'Completed · Strength and incline walk',
+          subtitle: 'Completed * Strength and incline walk',
           isCompleted: progress.isHabitCompleted(habits[3].id),
           onTap: () => context.read<ProgressProvider>().toggleHabit(habits[3].id),
         ),
         const SizedBox(height: 10),
-
         _HabitCard(
           icon: '🌙',
           iconBackground: const LinearGradient(
@@ -308,7 +298,7 @@ class _TodaySection extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
           title: habits[4].title,
-          subtitle: 'Still ahead · Quiet review before bed',
+          subtitle: 'Still ahead * Quiet review before bed',
           isCompleted: progress.isHabitCompleted(habits[4].id),
           onTap: () => context.read<ProgressProvider>().toggleHabit(habits[4].id),
         ),
@@ -337,13 +327,9 @@ class _HabitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-
-    final cardColor =
-        isCompleted ? const Color(0xFFECF3EC) : Colors.white.withValues(alpha: 0.72);
-
+    final cardColor = isCompleted ? const Color(0xFFECF3EC) : Colors.white.withValues(alpha: 0.72);
     final stateIcon = isCompleted ? '✓' : '○';
-    final stateBg =
-        isCompleted ? const Color(0xFF4F7A45) : const Color(0xFFE8E8E8);
+    final stateBg = isCompleted ? const Color(0xFF4F7A45) : const Color(0xFFE8E8E8);
     final stateText = isCompleted ? Colors.white : const Color(0xFFA0A0A0);
 
     return GestureDetector(
@@ -353,9 +339,7 @@ class _HabitCard extends StatelessWidget {
           color: cardColor,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isCompleted
-                ? const Color(0x1A4F7A45)
-                : const Color(0x14313A2E),
+            color: isCompleted ? const Color(0x1A4F7A45) : const Color(0x14313A2E),
           ),
           boxShadow: const [
             BoxShadow(
@@ -388,11 +372,8 @@ class _HabitCard extends StatelessWidget {
                     style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
-                      decoration:
-                          isCompleted ? TextDecoration.lineThrough : null,
-                      color: isCompleted
-                          ? const Color(0xFF667063)
-                          : const Color(0xFF1F261E),
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      color: isCompleted ? const Color(0xFF667063) : const Color(0xFF1F261E),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -432,13 +413,45 @@ class _HabitCard extends StatelessWidget {
 }
 
 // ---------------- WEEKLY STATS ----------------
-
 class _WeeklySection extends StatelessWidget {
   const _WeeklySection();
+
+  int _daysWithHabitsThisWeek(BuildContext context, List<String> habitIds) {
+    final now = DateTime.now();
+    final daysFromSunday = now.weekday % 7;
+    final startOfWeek = now.subtract(Duration(days: daysFromSunday));
+    final progress = context.read<ProgressProvider>();
+    int count = 0;
+    for (int i = 0; i < 7; i++) {
+      final day = startOfWeek.add(Duration(days: i));
+      final key = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final dayProgress = progress.historyByDate[key];
+      if (dayProgress != null) {
+        final hasAny = habitIds.any((id) => dayProgress.completedHabitIds.contains(id));
+        if (hasAny) count++;
+      }
+    }
+    return count;
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final progress = context.watch<ProgressProvider>();
+
+    if (!progress.isLoaded) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final prayerDays = _daysWithHabitsThisWeek(
+      context,
+      ['morning_prayer', 'bible_reading', 'evening_reflection'],
+    );
+    final mealDays = _daysWithHabitsThisWeek(context, ['clean_eating']);
+    final workoutDays = _daysWithHabitsThisWeek(context, ['exercise_30']);
 
     return Container(
       decoration: BoxDecoration(
@@ -468,7 +481,7 @@ class _WeeklySection extends StatelessWidget {
                 ),
               ),
               Text(
-                '11-day streak',
+                '${progress.currentStreak}-day streak',
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -479,164 +492,21 @@ class _WeeklySection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Row(
-            children: const [
-              Expanded(
-                child: _MiniStat(value: '5/7', label: 'Prayer rhythm'),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: _MiniStat(value: '4/7', label: 'Meals on plan'),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: _MiniStat(value: '3/5', label: 'Workouts'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _MiniStat({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.54),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x0D313A2E)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: textTheme.titleMedium?.copyWith(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: OraColors.primary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              color: const Color(0xFF667063),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------- MEETING SECTION ----------------
-
-class _MeetingSection extends StatelessWidget {
-  const _MeetingSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [OraColors.primary, OraColors.primaryDeep],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(41, 68, 58, 0.22),
-            blurRadius: 40,
-            offset: Offset(0, 18),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Men’s Group',
-                  style: textTheme.bodySmall?.copyWith(
-                    fontSize: 12,
-                    color: const Color(0xFFF1E6BB),
-                  ),
-                ),
+              Expanded(
+                child: _MiniStat(value: '$prayerDays/7', label: 'Prayer rhythm'),
               ),
-              Row(
-                children: const [
-                  _AttendanceDot(color: Color(0xFFC9A757)),
-                  SizedBox(width: 8),
-                  _AttendanceDot(color: Color(0xFFC9A757)),
-                  SizedBox(width: 8),
-                  _AttendanceDot(color: Color(0xFFD7D0B2)),
-                ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniStat(value: '$mealDays/7', label: 'Meals on plan'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniStat(value: '$workoutDays/5', label: 'Workouts'),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Next meeting · June 12',
-            style: textTheme.titleMedium?.copyWith(
-              fontSize: 20,
-              fontFamily: 'Fraunces',
-              letterSpacing: -0.02,
-              color: const Color(0xFFF8F4E8),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Monthly formation night with shared meal, discussion, and commitments for the next month.',
-            style: textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              height: 1.55,
-              color: const Color(0xC8F8F4E8),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-}
-
-class _AttendanceDot extends StatelessWidget {
-  final Color color;
-  const _AttendanceDot({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(5),
       ),
     );
   }
