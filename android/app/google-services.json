@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "328281519038",
+    "project_id": "ora-forma",
+    "storage_bucket": "ora-forma.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:328281519038:android:009376f1f1d63c8b367fef",
+        "android_client_info": {
+          "package_name": "com.example.catholic_habits"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCUyO7Tm13nLJpx9yQtAvVWMXwf80VlKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

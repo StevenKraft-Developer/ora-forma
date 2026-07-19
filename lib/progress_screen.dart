@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'models/habit.dart';
 import 'colors.dart';
+import 'providers/habit_provider.dart';
 import 'providers/progress_provider.dart';
 
 class ProgressScreen extends StatelessWidget {
@@ -112,7 +113,7 @@ class _ProgressPhoneScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   WeeklyCard(weekCompletion: thisWeekCompletion),
                   const SizedBox(height: 12),
-                  HabitStreaksCard(habits: progress.habits),
+                  HabitStreaksCard(habits: context.watch<HabitProvider>().activeHabits),
                   const SizedBox(height: 12),
                   InsightCard(
                     message:
