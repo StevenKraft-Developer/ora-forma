@@ -1,15 +1,62 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'main_navigation_screen.dart';
 import 'colors.dart';
+import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
+import 'providers/habit_provider.dart';
 import 'providers/progress_provider.dart';
+import 'providers/user_profile_provider.dart';
+import 'screens/root/app_gate.dart';
+import 'services/auth_service.dart';
+import 'services/habit_storage.dart';
 import 'services/progress_storage.dart';
+import 'services/user_profile_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  final authService = AuthService();
+  final userProfileService = UserProfileService();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ProgressProvider(ProgressStorage())..loadTodayProgress(),
+    MultiProvider(
+      providers: [
+        Provider<AuthService>.value(value: authService),
+        Provider<UserProfileService>.value(value: userProfileService),
+        // HabitProvider must be registered before ProgressProvider so the
+        // ProxyProvider below can depend on it.
+        ChangeNotifierProvider<HabitProvider>(
+          create: (_) => HabitProvider(HabitStorage())..loadHabits(),
+        ),
+        // ProgressProvider depends on HabitProvider for the active habit list.
+        // ChangeNotifierProxyProvider reuses the same ProgressProvider instance
+        // on every update — it is never recreated. Only updateActiveHabits() is
+        // called to push the new list in.
+        ChangeNotifierProxyProvider<HabitProvider, ProgressProvider>(
+          create: (_) => ProgressProvider(ProgressStorage()),
+          update: (_, habitProvider, progressProvider) {
+            progressProvider!.updateActiveHabits(habitProvider.activeHabits);
+            return progressProvider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(
+            authService: authService,
+            profileService: userProfileService,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => UserProfileProvider(
+            profileService: userProfileService,
+          ),
+        ),
+      ],
       child: const OraFormaApp(),
     ),
   );
@@ -53,7 +100,7 @@ class OraFormaApp extends StatelessWidget {
           iconColor: OraColors.primary,
         ),
       ),
-      home: const MainNavigationScreen(),
+      home: const AppGate(),
     );
   }
 }

@@ -9,13 +9,36 @@ class ProgressProvider extends ChangeNotifier {
 
   final ProgressStorage _storage;
 
-  final List<Habit> habits = const [
-    Habit(id: 'morning_prayer', title: 'Morning Prayer'),
-    Habit(id: 'bible_reading', title: 'Bible Reading'),
-    Habit(id: 'clean_eating', title: 'Clean Eating'),
-    Habit(id: 'exercise_30', title: '30-Minute Exercise'),
-    Habit(id: 'evening_reflection', title: 'Evening Reflection'),
-  ];
+  // ---------------------------------------------------------------------------
+  // Active habit list — injected by HabitProvider via updateActiveHabits().
+  // Replaces the old hardcoded const list.
+  // ProgressProvider no longer owns the habit catalog; it only owns completion
+  // state and history.
+  // ---------------------------------------------------------------------------
+  List<Habit> _activeHabits = [];
+
+  /// The current active habit list. Read-only outside this provider.
+  /// Screens that need this list should read from HabitProvider.activeHabits
+  /// directly (Task 8); this getter exists so existing progress calculations
+  /// and screen references that use progress.habits keep compiling during
+  /// the transition.
+  List<Habit> get habits => List.unmodifiable(_activeHabits);
+
+  /// Called by the ChangeNotifierProxyProvider in main.dart whenever
+  /// HabitProvider notifies. Updates the active habit list and triggers a
+  /// progress reload if this is the first time habits arrive.
+  void updateActiveHabits(List<Habit> activeHabits) {
+    _activeHabits = activeHabits;
+    if (!_isLoaded) {
+      // Habits just became available for the first time — kick off the initial
+      // progress load now instead of at construction time.
+      loadTodayProgress();
+    } else {
+      // Habit list changed after initial load (add/archive/delete). Counts and
+      // completion percentage update automatically via getters; just notify.
+      notifyListeners();
+    }
+  }
 
   List<String> _completedHabitIds = [];
   Map<String, DailyProgress> _historyByDate = {};
@@ -27,9 +50,9 @@ class ProgressProvider extends ChangeNotifier {
       Map.unmodifiable(_historyByDate);
 
   int get completedCount => _completedHabitIds.length;
-  int get totalCount => habits.length;
+  int get totalCount => _activeHabits.length;
   double get completionPercent =>
-      habits.isEmpty ? 0 : completedCount / totalCount;
+      _activeHabits.isEmpty ? 0 : completedCount / totalCount;
 
   int currentStreakForHabit(String habitId) {
     final now = DateTime.now();
@@ -201,7 +224,13 @@ class ProgressProvider extends ChangeNotifier {
     return total;
   }
 
-  int get totalThisWeek => habits.length * 7;
+  int get totalThisWeek {
+    if (_activeHabits.isEmpty) return 0;
+    // Use days elapsed this week (Sun=1 … Sat=7) so the denominator reflects
+    // what was actually trackable, not a fixed 7×N.
+    final daysElapsed = (DateTime.now().weekday % 7) + 1;
+    return _activeHabits.length * daysElapsed;
+  }
 
   double get weeklyCompletionPercent =>
       totalThisWeek == 0 ? 0 : completedThisWeek / totalThisWeek;
@@ -270,7 +299,9 @@ class ProgressProvider extends ChangeNotifier {
     final savedIds = await _storage.loadCompletedHabitIds();
     _historyByDate = await _storage.loadHistory();
 
-    final validHabitIds = habits.map((habit) => habit.id).toSet();
+    // Filter active IDs. Orphaned/archived IDs remain in raw history records
+    // but are excluded from today's active completion counts.
+    final validHabitIds = _activeHabits.map((habit) => habit.id).toSet();
 
     _historyByDate = {
       for (final entry in _historyByDate.entries)
