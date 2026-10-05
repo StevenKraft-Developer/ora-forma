@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/habit.dart';
-import '../services/habit_storage.dart';
+import '../services/firestore_habit_service.dart';
 
 /// Owns the user's persisted habit list and all CRUD operations on it.
 ///
@@ -14,7 +14,9 @@ import '../services/habit_storage.dart';
 class HabitProvider extends ChangeNotifier {
   HabitProvider(this._storage);
 
-  final HabitStorage _storage;
+  final FirestoreHabitService _storage;
+
+  String? _uid;
 
   // ---------------------------------------------------------------------------
   // Internal state
@@ -55,38 +57,32 @@ class HabitProvider extends ChangeNotifier {
   // Initialization
   // ---------------------------------------------------------------------------
 
-  /// Loads habits from [HabitStorage] and seeds defaults on first run.
-  ///
-  /// Respects the three [HabitStorage.loadHabits] cases:
-  ///   - `null`  → first run: seed from [kDefaultCatholicHabitSet], persist.
-  ///   - `[]`    → user has no habits (they cleared them); expose empty list,
-  ///               do NOT re-seed automatically.
-  ///   - `[...]` → normal load; sort by [Habit.sortOrder] and expose.
-  ///
-  /// Safe to call more than once (guarded by [_isLoaded]).
-  Future<void> loadHabits() async {
-    if (_isLoaded) return;
+  Future<void> loadHabits(String uid) async {
+    if (_isLoaded && _uid == uid) return;
 
+    _uid = uid;
     _isLoading = true;
+    _isLoaded = false;
+    _habits = [];
     notifyListeners();
 
-    final stored = await _storage.loadHabits();
+    try {
+      final stored = await _storage.loadHabits(uid);
 
-    if (stored == null) {
-      // --- First run: seed from defaults and persist immediately so the next
-      //     launch sees a real list rather than null again.
-      final seeded = kDefaultCatholicHabitSet.toList();
-      await _storage.saveHabits(seeded);
-      _habits = seeded;
-    } else {
-      // [] or [items] — use whatever was stored (including empty).
-      _habits = stored;
+      if (stored == null) {
+        final seeded = kDefaultCatholicHabitSet.toList();
+        await _storage.saveHabits(uid: uid, habits: seeded);
+        _habits = seeded;
+      } else {
+        _habits = stored;
+      }
+
+      _sortHabits();
+      _isLoaded = true;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _sortHabits();
-    _isLoading = false;
-    _isLoaded = true;
-    notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -99,10 +95,7 @@ class HabitProvider extends ChangeNotifier {
   /// or exceeds 100 characters.
   ///
   /// Returns `true` if the habit was added, `false` if validation failed.
-  Future<bool> addHabit({
-    required String title,
-    String? description,
-  }) async {
+  Future<bool> addHabit({required String title, String? description}) async {
     final trimmed = title.trim();
     if (trimmed.isEmpty || trimmed.length > 100) return false;
 
@@ -212,10 +205,7 @@ class HabitProvider extends ChangeNotifier {
     final index = _findIndexById(habitId);
     if (index == -1) return;
 
-    _habits = [
-      ..._habits.sublist(0, index),
-      ..._habits.sublist(index + 1),
-    ];
+    _habits = [..._habits.sublist(0, index), ..._habits.sublist(index + 1)];
 
     // Re-normalise active sortOrders to keep the sequence contiguous.
     _normalizeSortOrder();
@@ -284,13 +274,28 @@ class HabitProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears account-specific in-memory data at sign-out.
+  /// This deliberately does not delete any Firestore documents.
+  void clear() {
+    _uid = null;
+    _habits = [];
+    _isLoading = false;
+    _isLoaded = false;
+    notifyListeners();
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 
   /// Persists the current [_habits] list to storage.
   Future<void> _persist() async {
-    await _storage.saveHabits(_habits);
+    final uid = _uid;
+    if (uid == null) {
+      throw StateError('Cannot persist habits without an authenticated user.');
+    }
+
+    await _storage.saveHabits(uid: uid, habits: List<Habit>.from(_habits));
   }
 
   /// Sorts [_habits] in-place by [Habit.sortOrder] ascending.
@@ -299,7 +304,9 @@ class HabitProvider extends ChangeNotifier {
   void _sortHabits() {
     _habits.sort((a, b) {
       // Active habits sort by sortOrder; archived habits come after.
-      if (!a.isArchived && !b.isArchived) return a.sortOrder.compareTo(b.sortOrder);
+      if (!a.isArchived && !b.isArchived) {
+        return a.sortOrder.compareTo(b.sortOrder);
+      }
       if (a.isArchived && !b.isArchived) return 1;
       if (!a.isArchived && b.isArchived) return -1;
       return 0; // both archived — preserve relative order
