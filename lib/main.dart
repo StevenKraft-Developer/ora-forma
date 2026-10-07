@@ -59,8 +59,13 @@ Future<void> main() async {
           create: (_) => ProgressProvider(FirestoreProgressService()),
           update: (_, authProvider, habitProvider, progressProvider) {
             final progress = progressProvider!;
-            progress.setUser(authProvider.user?.uid);
-            progress.updateActiveHabits(habitProvider.activeHabits);
+
+            progress.syncAccount(
+              uid: authProvider.user?.uid,
+              activeHabits: habitProvider.activeHabits,
+              habitsReady: habitProvider.isLoaded,
+            );
+
             return progress;
           },
         ),
