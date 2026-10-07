@@ -9,7 +9,7 @@ class UserProfileProvider extends ChangeNotifier {
   bool _isLoading = false;
 
   UserProfileProvider({required UserProfileService profileService})
-      : _profileService = profileService;
+    : _profileService = profileService;
 
   UserProfile? get profile => _profile;
   bool get isLoading => _isLoading;
@@ -19,10 +19,16 @@ class UserProfileProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _profile = await _profileService.getProfile(uid);
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _profile = await _profileService.getProfile(uid);
+    } catch (e, st) {
+      debugPrint('loadProfile failed: $e');
+      debugPrintStack(stackTrace: st);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> completeOnboarding({
@@ -41,15 +47,22 @@ class UserProfileProvider extends ChangeNotifier {
       groupIds: _profile?.groupIds ?? const [],
     );
 
-    await _profileService.saveProfile(updatedProfile);
-    _profile = updatedProfile;
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await _profileService.saveProfile(updatedProfile);
+      _profile = updatedProfile;
+    } catch (e, st) {
+      debugPrint('completeOnboarding failed: $e');
+      debugPrintStack(stackTrace: st);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void clear() {
     _profile = null;
+    _isLoading = false;
     notifyListeners();
   }
 }

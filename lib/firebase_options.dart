@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -64,5 +61,15 @@ class DefaultFirebaseOptions {
     projectId: 'ora-forma',
     storageBucket: 'ora-forma.firebasestorage.app',
     iosBundleId: 'com.example.catholicHabits',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyB7Dtew8HgzgBMYW8FRDi3VyDio26zKgh8',
+    appId: '1:328281519038:web:faf921e5bc7253b2367fef',
+    messagingSenderId: '328281519038',
+    projectId: 'ora-forma',
+    authDomain: 'ora-forma.firebaseapp.com',
+    storageBucket: 'ora-forma.firebasestorage.app',
+    measurementId: 'G-HMQPP5PCXT',
   );
 }

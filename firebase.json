@@ -1,1 +1,33 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ora-forma","appId":"1:328281519038:android:009376f1f1d63c8b367fef","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ora-forma","configurations":{"android":"1:328281519038:android:009376f1f1d63c8b367fef","ios":"1:328281519038:ios:16d64e30053121b9367fef"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ora-forma",
+          "appId": "1:328281519038:android:009376f1f1d63c8b367fef",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ora-forma",
+          "configurations": {
+            "web": "1:328281519038:web:faf921e5bc7253b2367fef"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    }
+  }
+}

@@ -136,3 +136,7 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+# Node tooling for Firestore Security Rules tests
+node_modules/
+firebase-debug.log
+ui-debug.log

@@ -10,16 +10,14 @@ import 'providers/progress_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'screens/root/app_gate.dart';
 import 'services/auth_service.dart';
-import 'services/habit_storage.dart';
-import 'services/progress_storage.dart';
+import 'services/firestore_habit_service.dart';
+import 'services/firestore_progress_service.dart';
 import 'services/user_profile_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final authService = AuthService();
   final userProfileService = UserProfileService();
@@ -31,30 +29,49 @@ Future<void> main() async {
         Provider<UserProfileService>.value(value: userProfileService),
         // HabitProvider must be registered before ProgressProvider so the
         // ProxyProvider below can depend on it.
-        ChangeNotifierProvider<HabitProvider>(
-          create: (_) => HabitProvider(HabitStorage())..loadHabits(),
-        ),
-        // ProgressProvider depends on HabitProvider for the active habit list.
-        // ChangeNotifierProxyProvider reuses the same ProgressProvider instance
-        // on every update — it is never recreated. Only updateActiveHabits() is
-        // called to push the new list in.
-        ChangeNotifierProxyProvider<HabitProvider, ProgressProvider>(
-          create: (_) => ProgressProvider(ProgressStorage()),
-          update: (_, habitProvider, progressProvider) {
-            progressProvider!.updateActiveHabits(habitProvider.activeHabits);
-            return progressProvider;
-          },
-        ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
             authService: authService,
             profileService: userProfileService,
           ),
         ),
+
+        ChangeNotifierProxyProvider<AuthProvider, HabitProvider>(
+          create: (_) => HabitProvider(FirestoreHabitService()),
+          update: (_, authProvider, habitProvider) {
+            final uid = authProvider.user?.uid;
+
+            if (uid == null) {
+              habitProvider!.clear();
+            } else {
+              habitProvider!.loadHabits(uid);
+            }
+
+            return habitProvider;
+          },
+        ),
+
+        ChangeNotifierProxyProvider2<
+          AuthProvider,
+          HabitProvider,
+          ProgressProvider
+        >(
+          create: (_) => ProgressProvider(FirestoreProgressService()),
+          update: (_, authProvider, habitProvider, progressProvider) {
+            final progress = progressProvider!;
+
+            progress.syncAccount(
+              uid: authProvider.user?.uid,
+              activeHabits: habitProvider.activeHabits,
+              habitsReady: habitProvider.isLoaded,
+            );
+
+            return progress;
+          },
+        ),
         ChangeNotifierProvider(
-          create: (_) => UserProfileProvider(
-            profileService: userProfileService,
-          ),
+          create: (_) =>
+              UserProfileProvider(profileService: userProfileService),
         ),
       ],
       child: const OraFormaApp(),

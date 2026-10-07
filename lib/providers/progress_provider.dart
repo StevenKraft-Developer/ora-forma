@@ -2,12 +2,22 @@ import 'package:flutter/foundation.dart';
 
 import '../models/daily_progress.dart';
 import '../models/habit.dart';
-import '../services/progress_storage.dart';
+import '../services/firestore_progress_service.dart';
 
 class ProgressProvider extends ChangeNotifier {
   ProgressProvider(this._storage);
 
-  final ProgressStorage _storage;
+  final FirestoreProgressService _storage;
+
+  String? _uid;
+  bool _isLoading = false;
+  bool _habitsReady = false;
+  bool _isDisposed = false;
+  int _sessionVersion = 0;
+  String? _loadError;
+
+  bool get isLoading => _isLoading;
+  String? get loadError => _loadError;
 
   // ---------------------------------------------------------------------------
   // Active habit list — injected by HabitProvider via updateActiveHabits().
@@ -27,17 +37,78 @@ class ProgressProvider extends ChangeNotifier {
   /// Called by the ChangeNotifierProxyProvider in main.dart whenever
   /// HabitProvider notifies. Updates the active habit list and triggers a
   /// progress reload if this is the first time habits arrive.
-  void updateActiveHabits(List<Habit> activeHabits) {
-    _activeHabits = activeHabits;
-    if (!_isLoaded) {
-      // Habits just became available for the first time — kick off the initial
-      // progress load now instead of at construction time.
-      loadTodayProgress();
-    } else {
-      // Habit list changed after initial load (add/archive/delete). Counts and
-      // completion percentage update automatically via getters; just notify.
-      notifyListeners();
+
+  /// Receives account identity and habit-catalog readiness together.
+  ///
+  /// An empty active list is valid once the catalog has finished loading.
+  void syncAccount({
+    required String? uid,
+    required List<Habit> activeHabits,
+    required bool habitsReady,
+  }) {
+    if (_isDisposed) return;
+
+    final accountChanged = _uid != uid;
+    final nextHabits = uid == null ? <Habit>[] : List<Habit>.from(activeHabits);
+    final nextReady = uid != null && habitsReady;
+
+    final inputsChanged =
+        accountChanged ||
+        _habitsReady != nextReady ||
+        !listEquals(_activeHabits, nextHabits);
+
+    if (accountChanged) {
+      _sessionVersion++;
+      _uid = uid;
+      _completedHabitIds = [];
+      _historyByDate = {};
+      _isLoaded = false;
+      _isLoading = false;
+      _loadError = null;
     }
+
+    _activeHabits = nextHabits;
+    _habitsReady = nextReady;
+
+    if (_isLoaded) {
+      _refreshActiveCompletions();
+    }
+
+    final version = _sessionVersion;
+
+    // Defer notifications and loading until after this synchronous proxy update.
+    Future.microtask(() async {
+      if (!_isCurrentSession(version, uid)) return;
+
+      if (inputsChanged) {
+        notifyListeners();
+      }
+
+      if (_uid != null &&
+          _habitsReady &&
+          !_isLoaded &&
+          !_isLoading &&
+          _loadError == null) {
+        await loadTodayProgress();
+      }
+    });
+  }
+
+  void clear() {
+    syncAccount(uid: null, activeHabits: const [], habitsReady: false);
+  }
+
+  bool _isCurrentSession(int version, String? uid) {
+    return !_isDisposed && version == _sessionVersion && uid == _uid;
+  }
+
+  /// Derives selectable completions without changing stored history.
+  void _refreshActiveCompletions() {
+    final activeIds = _activeHabits.map((habit) => habit.id).toSet();
+    final savedIds =
+        _historyByDate[todayKey]?.completedHabitIds ?? const <String>[];
+
+    _completedHabitIds = savedIds.where(activeIds.contains).toSet().toList();
   }
 
   List<String> _completedHabitIds = [];
@@ -295,91 +366,127 @@ class ProgressProvider extends ChangeNotifier {
   }
 
   Future<void> loadTodayProgress() async {
-    final savedDate = await _storage.loadSavedDateKey();
-    final savedIds = await _storage.loadCompletedHabitIds();
-    _historyByDate = await _storage.loadHistory();
+    final uid = _uid;
 
-    // Filter active IDs. Orphaned/archived IDs remain in raw history records
-    // but are excluded from today's active completion counts.
-    final validHabitIds = _activeHabits.map((habit) => habit.id).toSet();
-
-    _historyByDate = {
-      for (final entry in _historyByDate.entries)
-        entry.key: DailyProgress(
-          dateKey: entry.value.dateKey,
-          completedHabitIds: entry.value.completedHabitIds
-              .where((id) => validHabitIds.contains(id))
-              .toSet()
-              .toList(),
-        ),
-    };
-
-    if (savedDate == todayKey) {
-      _completedHabitIds = savedIds
-          .where((id) => validHabitIds.contains(id))
-          .toSet()
-          .toList();
-    } else {
-      _completedHabitIds = [];
+    if (_isDisposed ||
+        uid == null ||
+        !_habitsReady ||
+        _isLoading ||
+        _isLoaded) {
+      return;
     }
 
-    _historyByDate[todayKey] = DailyProgress(
-      dateKey: todayKey,
-      completedHabitIds: List<String>.from(_completedHabitIds),
-    );
-
-    await _storage.saveTodayProgress(
-      dateKey: todayKey,
-      completedHabitIds: List<String>.from(_completedHabitIds),
-    );
-
-    _isLoaded = true;
+    final version = _sessionVersion;
+    _isLoading = true;
+    _loadError = null;
     notifyListeners();
+
+    try {
+      final history = await _storage.loadHistory(uid);
+
+      if (!_isCurrentSession(version, uid)) return;
+
+      _historyByDate = history;
+      _refreshActiveCompletions();
+      _isLoaded = true;
+    } catch (error, stackTrace) {
+      if (!_isCurrentSession(version, uid)) return;
+
+      _loadError = 'Could not load your progress. Please try again.';
+      debugPrint('Progress load failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      if (_isCurrentSession(version, uid)) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> retryLoad() async {
+    if (_isDisposed || _uid == null || !_habitsReady || _isLoading) {
+      return;
+    }
+
+    _loadError = null;
+    await loadTodayProgress();
   }
 
   Future<void> toggleHabit(String habitId) async {
-    if (_completedHabitIds.contains(habitId)) {
-      _completedHabitIds.remove(habitId);
-    } else {
-      _completedHabitIds.add(habitId);
+    final uid = _uid;
+
+    if (uid == null) {
+      throw StateError('Cannot save progress without an authenticated user.');
     }
 
-    _completedHabitIds = _completedHabitIds.toSet().toList();
+    if (!_isLoaded || !_habitsReady) {
+      throw StateError('Progress is not ready yet. Please try again shortly.');
+    }
 
-    _historyByDate[todayKey] = DailyProgress(
-      dateKey: todayKey,
-      completedHabitIds: List<String>.from(_completedHabitIds),
+    if (!_activeHabits.any((habit) => habit.id == habitId)) {
+      return;
+    }
+
+    final version = _sessionVersion;
+    final dateKey = todayKey;
+
+    final completedIds = {...?_historyByDate[dateKey]?.completedHabitIds};
+
+    if (!completedIds.remove(habitId)) {
+      completedIds.add(habitId);
+    }
+
+    final updated = DailyProgress(
+      dateKey: dateKey,
+      completedHabitIds: completedIds.toList(),
     );
 
     await _storage.saveTodayProgress(
-      dateKey: todayKey,
-      completedHabitIds: List<String>.from(_completedHabitIds),
+      uid: uid,
+      dateKey: dateKey,
+      completedHabitIds: updated.completedHabitIds,
     );
 
+    if (!_isCurrentSession(version, uid)) return;
+
+    _historyByDate[dateKey] = updated;
+    _refreshActiveCompletions();
+    notifyListeners();
+  }
+
+  Future<void> clearAllProgress() async {
+    final uid = _uid;
+
+    if (uid == null) {
+      throw StateError('Cannot clear progress without an authenticated user.');
+    }
+
+    if (!_isLoaded || _isLoading) {
+      throw StateError('Wait for progress to finish loading before resetting.');
+    }
+
+    final version = _sessionVersion;
+
+    await _storage.clearAllProgressHistory(uid);
+
+    if (!_isCurrentSession(version, uid)) return;
+
+    _completedHabitIds = [];
+    _historyByDate = {};
     notifyListeners();
   }
 
   String _dateKeyFor(DateTime date) {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
+
     return '${date.year}-$month-$day';
   }
 
-  Future<void> clearAllProgress() async {
-  _completedHabitIds = [];
-  _historyByDate = {};
-  await _storage.clearAllProgressHistory();
-
-  _historyByDate[todayKey] = DailyProgress(
-    dateKey: todayKey,
-    completedHabitIds: [],
-  );
-
-  await _storage.saveTodayProgress(
-    dateKey: todayKey,
-    completedHabitIds: [],
-  );
-
-  notifyListeners();
-}
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _sessionVersion++;
+    super.dispose();
+  }
 }

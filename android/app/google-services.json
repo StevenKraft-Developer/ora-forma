@@ -12,7 +12,12 @@
           "package_name": "com.example.catholic_habits"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "328281519038-t7qpik50vaioos514e0vjl6vncven7p8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBCUyO7Tm13nLJpx9yQtAvVWMXwf80VlKs"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "328281519038-t7qpik50vaioos514e0vjl6vncven7p8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "328281519038-5cua00u0hhsp5rnvr715pl958vtlfg8g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.catholicHabits"
+              }
+            }
+          ]
         }
       }
     }

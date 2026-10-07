@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'providers/auth_provider.dart';
 import 'colors.dart';
 import 'providers/progress_provider.dart';
 
@@ -14,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notificationsEnabled = true;
   bool _dailyReminderEnabled = true;
+  bool _isSigningOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +150,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                   ),
+                  const Divider(height: 1),
+                  ListTile(
+                    enabled: !_isSigningOut,
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: OraColors.primary,
+                    ),
+                    title: Text(_isSigningOut ? 'Signing out…' : 'Sign out'),
+                    subtitle: const Text(
+                      'Sign out of your account on this browser or device',
+                    ),
+                    trailing: _isSigningOut
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.chevron_right_rounded),
+                    onTap: _isSigningOut ? null : _signOut,
+                  ),
                 ],
               ),
             ),
@@ -171,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.restart_alt_rounded,
                     iconColor: OraColors.destructive,
                     title: 'Reset Progress',
-                    subtitle: 'Clear saved habits and history',
+                    subtitle: 'Delete saved completions and progress history',
                     destructive: true,
                     onTap: _confirmResetProgress,
                   ),
@@ -182,6 +203,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _signOut() async {
+    if (_isSigningOut) return;
+
+    final auth = context.read<AuthProvider>();
+
+    setState(() {
+      _isSigningOut = true;
+    });
+
+    try {
+      await auth.signOut();
+      // AppGate should react to the authentication-state change.
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not sign out. Please try again.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSigningOut = false;
+        });
+      }
+    }
   }
 
   Future<void> _confirmResetProgress() async {
@@ -195,7 +243,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return AlertDialog(
               title: const Text('Reset Progress?'),
               content: const Text(
-                'This will permanently clear your saved habit progress and history on this device.',
+                'This will permanently delete your account’s saved habit completions '
+                'and progress history from cloud storage. Your habit list will remain.',
               ),
               actions: [
                 TextButton(
@@ -217,13 +266,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (!confirmed || !mounted) return;
 
-    await provider.clearAllProgress();
+    try {
+      await provider.clearAllProgress();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Progress reset successfully.')),
-    );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Progress reset successfully.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Could not reset progress. Please try again.'),
+        ),
+      );
+    }
   }
 
   void _showSimpleSheet(
