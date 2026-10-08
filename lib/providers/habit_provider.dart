@@ -18,6 +18,12 @@ class HabitProvider extends ChangeNotifier {
 
   String? _uid;
 
+  int _sessionVersion = 0;
+  bool _isDisposed = false;
+
+  bool _isCurrentSession(int version, String uid) {
+    return !_isDisposed && version == _sessionVersion && uid == _uid;
+  }
   // ---------------------------------------------------------------------------
   // Internal state
   // ---------------------------------------------------------------------------
@@ -58,7 +64,10 @@ class HabitProvider extends ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   Future<void> loadHabits(String uid) async {
-    if (_isLoaded && _uid == uid) return;
+    if (_isDisposed) return;
+    if (_uid == uid && (_isLoaded || _isLoading)) return;
+
+    final version = ++_sessionVersion;
 
     _uid = uid;
     _isLoading = true;
@@ -69,19 +78,27 @@ class HabitProvider extends ChangeNotifier {
     try {
       final stored = await _storage.loadHabits(uid);
 
+      if (!_isCurrentSession(version, uid)) return;
+
       if (stored == null) {
         final seeded = kDefaultCatholicHabitSet.toList();
+
         await _storage.saveHabits(uid: uid, habits: seeded);
+
+        if (!_isCurrentSession(version, uid)) return;
+
         _habits = seeded;
       } else {
-        _habits = stored;
+        _habits = List<Habit>.from(stored);
       }
 
       _sortHabits();
       _isLoaded = true;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (_isCurrentSession(version, uid)) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -277,6 +294,9 @@ class HabitProvider extends ChangeNotifier {
   /// Clears account-specific in-memory data at sign-out.
   /// This deliberately does not delete any Firestore documents.
   void clear() {
+    if (_isDisposed) return;
+
+    _sessionVersion++;
     _uid = null;
     _habits = [];
     _isLoading = false;
@@ -340,5 +360,12 @@ class HabitProvider extends ChangeNotifier {
       replacement,
       ..._habits.sublist(index + 1),
     ];
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _sessionVersion++;
+    super.dispose();
   }
 }

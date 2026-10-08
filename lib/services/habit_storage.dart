@@ -44,7 +44,10 @@ class HabitStorage {
 
       if (decoded is! List) {
         // Top-level structure is wrong; return empty so the app doesn't crash.
-        assert(false, 'HabitStorage: expected JSON array, got ${decoded.runtimeType}');
+        assert(
+          false,
+          'HabitStorage: expected JSON array, got ${decoded.runtimeType}',
+        );
         return [];
       }
 

@@ -10,7 +10,7 @@ service cloud.firestore {
     }
 
     // Habits, metadata, daily logs, and other user-owned subcollections.
-    match /users/{uid}/{document=**} {
+    match /users/{uid}/{subcollection}/{document=**} {
       allow read, write: if request.auth != null
           && request.auth.uid == uid;
     }

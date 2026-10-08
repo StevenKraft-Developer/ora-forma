@@ -66,9 +66,7 @@ class _AppGateState extends State<AppGate> {
 
     // ── Gate 1: Auth loading ─────────────────────────────────────────────────
     if (authProvider.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final user = authProvider.user;
@@ -96,9 +94,7 @@ class _AppGateState extends State<AppGate> {
     }
 
     if (profileProvider.isLoading || profileProvider.profile == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (!profileProvider.isOnboardingComplete) {
@@ -113,9 +109,7 @@ class _AppGateState extends State<AppGate> {
     if (_habitOnboardingComplete == null) {
       // Still reading from SharedPreferences — show a brief loading indicator
       // rather than flashing the wrong screen.
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_habitOnboardingComplete == false) {

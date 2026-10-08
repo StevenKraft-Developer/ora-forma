@@ -9,12 +9,14 @@ const {
 
 const {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   orderBy,
   query,
   setDoc,
+  updateDoc,
   where,
 } = require("firebase/firestore");
 
@@ -22,7 +24,7 @@ let testEnv;
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: "catholic-habits-rules-test",
+    projectId: "demo-catholic-habits",
     firestore: {
       rules: fs.readFileSync(
         path.join(__dirname, "..", "firestore.rules"),
@@ -162,4 +164,83 @@ describe("Firestore user data isolation", () => {
 
     await assertFails(getDocs(logs));
   });
+
+  test("user A cannot delete their profile", async () => {
+  const dbA = testEnv.authenticatedContext(userA).firestore();
+  const profile = doc(dbA, "users", userA);
+
+  await assertSucceeds(
+    setDoc(profile, {
+      uid: userA,
+      email: "a@example.com",
+    }),
+  );
+
+  await assertFails(deleteDoc(profile));
+});
+
+describe.each(["habits", "meta", "dailyLogs"])(
+  "%s account boundaries",
+  (subcollection) => {
+    const documentId = "isolation-test";
+
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(
+            context.firestore(),
+            "users",
+            userA,
+            subcollection,
+            documentId,
+          ),
+          { marker: "owned-by-a" },
+        );
+      });
+    });
+
+    test("owner can read, update, and delete their document", async () => {
+      const dbA = testEnv.authenticatedContext(userA).firestore();
+      const target = doc(dbA, "users", userA, subcollection, documentId);
+
+      await assertSucceeds(getDoc(target));
+      await assertSucceeds(updateDoc(target, { marker: "updated-by-a" }));
+      await assertSucceeds(deleteDoc(target));
+    });
+
+    test("another account cannot read, create, update, delete, or list", async () => {
+      const dbB = testEnv.authenticatedContext(userB).firestore();
+      const target = doc(dbB, "users", userA, subcollection, documentId);
+
+      await assertFails(getDoc(target));
+      await assertFails(
+        setDoc(doc(dbB, "users", userA, subcollection, "new-document"), {
+          marker: "created-by-b",
+        }),
+      );
+      await assertFails(updateDoc(target, { marker: "updated-by-b" }));
+      await assertFails(deleteDoc(target));
+      await assertFails(
+        getDocs(collection(dbB, "users", userA, subcollection)),
+      );
+    });
+
+    test("unauthenticated clients cannot read, create, update, delete, or list", async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const target = doc(db, "users", userA, subcollection, documentId);
+
+      await assertFails(getDoc(target));
+      await assertFails(
+        setDoc(doc(db, "users", userA, subcollection, "new-document"), {
+          marker: "unauthenticated",
+        }),
+      );
+      await assertFails(updateDoc(target, { marker: "unauthenticated" }));
+      await assertFails(deleteDoc(target));
+      await assertFails(
+        getDocs(collection(db, "users", userA, subcollection)),
+      );
+    });
+  },
+);
 });

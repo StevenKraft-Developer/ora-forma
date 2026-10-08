@@ -17,8 +17,8 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider({
     required AuthService authService,
     required UserProfileService profileService,
-  })  : _authService = authService,
-        _profileService = profileService {
+  }) : _authService = authService,
+       _profileService = profileService {
     _authSubscription = _authService.authStateChanges().listen((user) async {
       _user = user;
       _isLoading = false;
@@ -63,10 +63,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> signIn({required String email, required String password}) async {
     try {
       _isLoading = true;
       _error = null;
