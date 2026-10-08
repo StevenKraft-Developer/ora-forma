@@ -11,11 +11,11 @@ const _uuid = Uuid();
 // strings, so they must never change.
 // ---------------------------------------------------------------------------
 const List<Habit> kDefaultCatholicHabitSet = [
-  Habit(id: 'morning_prayer',     title: 'Morning Prayer',      sortOrder: 0),
-  Habit(id: 'bible_reading',      title: 'Bible Reading',       sortOrder: 1),
-  Habit(id: 'clean_eating',       title: 'Clean Eating',        sortOrder: 2),
-  Habit(id: 'exercise_30',        title: '30-Minute Exercise',  sortOrder: 3),
-  Habit(id: 'evening_reflection', title: 'Evening Reflection',  sortOrder: 4),
+  Habit(id: 'morning_prayer', title: 'Morning Prayer', sortOrder: 0),
+  Habit(id: 'bible_reading', title: 'Bible Reading', sortOrder: 1),
+  Habit(id: 'clean_eating', title: 'Clean Eating', sortOrder: 2),
+  Habit(id: 'exercise_30', title: '30-Minute Exercise', sortOrder: 3),
+  Habit(id: 'evening_reflection', title: 'Evening Reflection', sortOrder: 4),
 ];
 
 // ---------------------------------------------------------------------------
@@ -70,19 +70,25 @@ class Habit {
     final sortOrder = json['sortOrder'];
 
     if (id == null || id is! String || id.isEmpty) {
-      throw FormatException('Habit.fromJson: missing or empty required field "id"');
+      throw FormatException(
+        'Habit.fromJson: missing or empty required field "id"',
+      );
     }
     if (title == null || title is! String || title.isEmpty) {
-      throw FormatException('Habit.fromJson: missing or empty required field "title"');
+      throw FormatException(
+        'Habit.fromJson: missing or empty required field "title"',
+      );
     }
     if (sortOrder == null || sortOrder is! int) {
-      throw FormatException('Habit.fromJson: missing or invalid required field "sortOrder"');
+      throw FormatException(
+        'Habit.fromJson: missing or invalid required field "sortOrder"',
+      );
     }
 
     return Habit(
       id: id,
       title: title,
-      description: json['description'] as String?,     // null if absent — OK
+      description: json['description'] as String?, // null if absent — OK
       sortOrder: sortOrder,
       isArchived: json['isArchived'] as bool? ?? false, // false if absent — OK
     );

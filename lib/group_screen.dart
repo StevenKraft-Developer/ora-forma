@@ -365,10 +365,7 @@ class _GroupHeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          colors: [
-            group.accentColor,
-            OraColors.primaryDeep,
-          ],
+          colors: [group.accentColor, OraColors.primaryDeep],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -424,15 +421,9 @@ class _GroupHeroCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.18),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
-            child: Icon(
-              group.icon,
-              color: Colors.white,
-              size: 26,
-            ),
+            child: Icon(group.icon, color: Colors.white, size: 26),
           ),
         ],
       ),
@@ -443,16 +434,11 @@ class _GroupHeroCard extends StatelessWidget {
 class _SectionCard extends StatelessWidget {
   final Widget child;
 
-  const _SectionCard({
-    required this.child,
-  });
+  const _SectionCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: OraColors.surface,
-      child: child,
-    );
+    return Card(color: OraColors.surface, child: child);
   }
 }
 
@@ -479,11 +465,7 @@ class _GroupMemberTile extends StatelessWidget {
       leading: CircleAvatar(
         radius: 20,
         backgroundColor: iconColor.withValues(alpha: 0.12),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 20,
-        ),
+        child: Icon(icon, color: iconColor, size: 20),
       ),
       title: Text(
         name,
@@ -541,10 +523,7 @@ class _ChallengeCard extends StatelessWidget {
                 color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: accentColor,
-              ),
+              child: Icon(icon, color: accentColor),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -600,10 +579,7 @@ class _SimpleActionTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return ListTile(
-      leading: Icon(
-        icon,
-        color: OraColors.primary,
-      ),
+      leading: Icon(icon, color: OraColors.primary),
       title: Text(
         title,
         style: textTheme.titleMedium?.copyWith(
@@ -613,14 +589,9 @@ class _SimpleActionTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: textTheme.bodySmall?.copyWith(
-          color: OraColors.muted,
-        ),
+        style: textTheme.bodySmall?.copyWith(color: OraColors.muted),
       ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: OraColors.muted,
-      ),
+      trailing: const Icon(Icons.chevron_right_rounded, color: OraColors.muted),
     );
   }
 }

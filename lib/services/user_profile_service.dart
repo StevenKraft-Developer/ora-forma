@@ -5,7 +5,7 @@ class UserProfileService {
   final FirebaseFirestore _firestore;
 
   UserProfileService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');

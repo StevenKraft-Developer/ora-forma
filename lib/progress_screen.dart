@@ -113,7 +113,9 @@ class _ProgressPhoneScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   WeeklyCard(weekCompletion: thisWeekCompletion),
                   const SizedBox(height: 12),
-                  HabitStreaksCard(habits: context.watch<HabitProvider>().activeHabits),
+                  HabitStreaksCard(
+                    habits: context.watch<HabitProvider>().activeHabits,
+                  ),
                   const SizedBox(height: 12),
                   InsightCard(
                     message:

@@ -25,18 +25,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final success = await context.read<AuthProvider>().register(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
     if (!mounted) return;
 
     if (!success) {
       final error =
           context.read<AuthProvider>().error ?? 'Registration failed.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 

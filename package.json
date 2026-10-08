@@ -27,5 +27,10 @@
     "@firebase/rules-unit-testing": "^5.0.2",
     "firebase": "^12.19.0",
     "jest": "^30.5.2"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "1.14.5"
+    }
   }
 }

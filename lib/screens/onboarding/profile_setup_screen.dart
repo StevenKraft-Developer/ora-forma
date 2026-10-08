@@ -28,10 +28,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (user == null) return;
 
     await context.read<UserProfileProvider>().completeOnboarding(
-          uid: user.uid,
-          email: user.email ?? '',
-          displayName: _displayNameController.text.trim(),
-        );
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: _displayNameController.text.trim(),
+    );
   }
 
   @override

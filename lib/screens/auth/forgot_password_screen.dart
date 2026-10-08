@@ -23,8 +23,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final success = await context.read<AuthProvider>().sendPasswordResetEmail(
-          _emailController.text.trim(),
-        );
+      _emailController.text.trim(),
+    );
 
     if (!mounted) return;
 
@@ -36,9 +36,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } else {
       final error =
           context.read<AuthProvider>().error ?? 'Could not send reset email.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
