@@ -243,4 +243,160 @@ describe.each(["habits", "meta", "dailyLogs"])(
     });
   },
 );
+
+});
+
+describe("Group membership access", () => {
+  const groupId = "friday-fraternity";
+  const ownerUid = "group-owner";
+  const memberUid = "group-member";
+  const outsiderUid = "group-outsider";
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+
+      await setDoc(doc(db, "groups", groupId), {
+        name: "Friday Fraternity",
+        description: "Weekly brotherhood",
+        ownerUid,
+      });
+
+      await setDoc(
+        doc(db, "groups", groupId, "members", ownerUid),
+        {role: "owner"},
+      );
+
+      await setDoc(
+        doc(db, "groups", groupId, "members", memberUid),
+        {role: "member"},
+      );
+
+      await setDoc(doc(db, "groupInvites", "test-invite"), {
+        groupId,
+        createdBy: ownerUid,
+      });
+    });
+  });
+
+  test("owner and member can read their group", async () => {
+    for (const uid of [ownerUid, memberUid]) {
+      const db = testEnv.authenticatedContext(uid).firestore();
+
+      await assertSucceeds(getDoc(doc(db, "groups", groupId)));
+    }
+  });
+
+  test("outsider and signed-out client cannot read the group", async () => {
+    const contexts = [
+      testEnv.authenticatedContext(outsiderUid),
+      testEnv.unauthenticatedContext(),
+    ];
+
+    for (const context of contexts) {
+      await assertFails(
+        getDoc(doc(context.firestore(), "groups", groupId)),
+      );
+    }
+  });
+
+  test("a forged discovery index does not grant group access", async () => {
+    const db = testEnv.authenticatedContext(outsiderUid).firestore();
+
+    await assertSucceeds(
+      setDoc(
+        doc(db, "users", outsiderUid, "groupMemberships", groupId),
+        {joinedAt: "forged"},
+      ),
+    );
+
+    await assertFails(getDoc(doc(db, "groups", groupId)));
+  });
+
+  test("a forged profile groupIds array does not grant access", async () => {
+    const db = testEnv.authenticatedContext(outsiderUid).firestore();
+
+    await assertSucceeds(
+      setDoc(doc(db, "users", outsiderUid), {
+        groupIds: [groupId],
+      }),
+    );
+
+    await assertFails(getDoc(doc(db, "groups", groupId)));
+  });
+
+  test("even the owner cannot directly create, update, or delete groups", async () => {
+    const db = testEnv.authenticatedContext(ownerUid).firestore();
+
+    await assertFails(
+      setDoc(doc(db, "groups", "unauthorized-group"), {
+        name: "Unauthorized",
+        ownerUid,
+      }),
+    );
+
+    await assertFails(
+      updateDoc(doc(db, "groups", groupId), {
+        name: "Unauthorized edit",
+      }),
+    );
+
+    await assertFails(deleteDoc(doc(db, "groups", groupId)));
+  });
+
+  test("a member can read their own membership", async () => {
+    const db = testEnv.authenticatedContext(memberUid).firestore();
+
+    await assertSucceeds(
+      getDoc(doc(db, "groups", groupId, "members", memberUid)),
+    );
+  });
+
+  test("a member cannot read another membership or list members", async () => {
+    const db = testEnv.authenticatedContext(memberUid).firestore();
+
+    await assertFails(
+      getDoc(doc(db, "groups", groupId, "members", ownerUid)),
+    );
+
+    await assertFails(
+      getDocs(collection(db, "groups", groupId, "members")),
+    );
+  });
+
+  test("an outsider cannot create their own authoritative membership", async () => {
+    const db = testEnv.authenticatedContext(outsiderUid).firestore();
+
+    await assertFails(
+      setDoc(
+        doc(db, "groups", groupId, "members", outsiderUid),
+        {role: "owner"},
+      ),
+    );
+  });
+
+  test("a member cannot change their role or delete membership", async () => {
+    const db = testEnv.authenticatedContext(memberUid).firestore();
+    const membership = doc(
+      db, "groups", groupId, "members", memberUid,
+    );
+
+    await assertFails(updateDoc(membership, {role: "owner"}));
+    await assertFails(deleteDoc(membership));
+  });
+
+  test("even the owner cannot directly read, list, or write invites", async () => {
+    const db = testEnv.authenticatedContext(ownerUid).firestore();
+    const invite = doc(db, "groupInvites", "test-invite");
+
+    await assertFails(getDoc(invite));
+    await assertFails(getDocs(collection(db, "groupInvites")));
+
+    await assertFails(
+      setDoc(doc(db, "groupInvites", "new-invite"), {groupId}),
+    );
+
+    await assertFails(updateDoc(invite, {groupId: "another-group"}));
+    await assertFails(deleteDoc(invite));
+  });
 });

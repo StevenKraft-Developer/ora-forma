@@ -76,3 +76,41 @@ jobs:
             --only firestore \
             --project demo-catholic-habits \
             "npm run test:firestore-rules"
+
+  functions:
+    name: Functions tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "24.0.2"
+
+      - name: Install Functions dependencies
+        run: npm --prefix functions ci
+
+      - name: Build Functions
+        run: npm --prefix functions run build
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@15.20.0
+
+      - name: Run Group function tests
+        run: |
+          firebase emulators:exec \
+            --only firestore \
+            --project demo-catholic-habits \
+            "npm --prefix functions run test:group"

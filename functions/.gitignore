@@ -1,0 +1,11 @@
+# Compiled TypeScript output
+/lib/
+
+# Installed dependencies
+/node_modules/
+
+# Legacy TypeScript declarations
+/typings/
+
+# Local configuration
+*.local
