@@ -8,10 +8,15 @@
  */
 
 import {initializeApp} from "firebase-admin/app";
-import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {
+  FieldValue,
+  getFirestore,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {setGlobalOptions} from "firebase-functions";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import {randomBytes} from "node:crypto";
 
 initializeApp();
 
@@ -134,5 +139,251 @@ export const createGroup = onCall(
     return {
       groupId: groupRef.id,
     };
+  },
+);
+interface CreateGroupInviteResult {
+  inviteCode: string;
+  expiresAt: string;
+}
+
+export const createGroupInvite = onCall(
+  async (request): Promise<CreateGroupInviteResult> => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in before creating an invitation.",
+      );
+    }
+
+    const data: unknown = request.data;
+
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      Array.isArray(data)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid group ID.",
+      );
+    }
+
+    const input = data as Record<string, unknown>;
+
+    if (
+      typeof input.groupId !== "string" ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(input.groupId)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid group ID.",
+      );
+    }
+
+    const uid = request.auth.uid;
+    const groupId = input.groupId;
+    const groupRef = db.collection("groups").doc(groupId);
+    const ownerMembershipRef = groupRef.collection("members").doc(uid);
+
+    const inviteCode = randomBytes(32).toString("hex");
+    const inviteRef = db.collection("groupInvites").doc(inviteCode);
+
+    const sevenDaysInMilliseconds = 7 * 24 * 60 * 60 * 1000;
+    const expiresAt = Timestamp.fromMillis(
+      Date.now() + sevenDaysInMilliseconds,
+    );
+
+    try {
+      await db.runTransaction(async (transaction) => {
+        const group = await transaction.get(groupRef);
+        const membership = await transaction.get(ownerMembershipRef);
+
+        if (
+          !group.exists ||
+          group.get("ownerUid") !== uid ||
+          !membership.exists ||
+          membership.get("role") !== "owner"
+        ) {
+          throw new HttpsError(
+            "permission-denied",
+            "Only the group owner can create an invitation.",
+          );
+        }
+
+        transaction.create(inviteRef, {
+          groupId,
+          createdBy: uid,
+          createdAt: FieldValue.serverTimestamp(),
+          expiresAt,
+          usedBy: null,
+          usedAt: null,
+        });
+      });
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+            logger.error("createGroupInvite failed", {
+        groupId,
+      });
+
+      throw new HttpsError(
+        "internal",
+        "The invitation could not be created. Please try again.",
+      );
+    }
+
+    return {
+      inviteCode,
+      expiresAt: expiresAt.toDate().toISOString(),
+    };
+  },
+);
+interface JoinGroupResult {
+  groupId: string;
+  status: "joined" | "already-member";
+}
+
+export const joinGroup = onCall(
+  async (request): Promise<JoinGroupResult> => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in before joining a group.",
+      );
+    }
+
+    const data: unknown = request.data;
+
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      Array.isArray(data)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid invitation code.",
+      );
+    }
+
+    const input = data as Record<string, unknown>;
+
+    if (typeof input.inviteCode !== "string") {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid invitation code.",
+      );
+    }
+
+    const inviteCode = input.inviteCode.trim();
+
+    if (!/^[a-f0-9]{64}$/.test(inviteCode)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid invitation code.",
+      );
+    }
+
+    const uid = request.auth.uid;
+    const inviteRef = db.collection("groupInvites").doc(inviteCode);
+
+    try {
+      return await db.runTransaction(
+        async (transaction): Promise<JoinGroupResult> => {
+          const invite = await transaction.get(inviteRef);
+
+          if (!invite.exists) {
+            throw new HttpsError(
+              "failed-precondition",
+              "This invitation is unavailable.",
+            );
+          }
+
+          const groupId: unknown = invite.get("groupId");
+
+          if (
+            typeof groupId !== "string" ||
+            !/^[A-Za-z0-9_-]{1,128}$/.test(groupId)
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "This invitation is unavailable.",
+            );
+          }
+
+          const groupRef = db.collection("groups").doc(groupId);
+          const memberRef = groupRef.collection("members").doc(uid);
+          const membershipIndexRef = db
+            .collection("users")
+            .doc(uid)
+            .collection("groupMemberships")
+            .doc(groupId);
+
+          const group = await transaction.get(groupRef);
+          const membership = await transaction.get(memberRef);
+
+          if (!group.exists) {
+            throw new HttpsError(
+              "failed-precondition",
+              "This invitation is unavailable.",
+            );
+          }
+
+          if (membership.exists) {
+            return {
+              groupId,
+              status: "already-member",
+            };
+          }
+
+          const expiresAt: unknown = invite.get("expiresAt");
+
+          if (
+            !(expiresAt instanceof Timestamp) ||
+            expiresAt.toMillis() <= Date.now() ||
+            invite.get("usedBy") !== null ||
+            invite.get("usedAt") !== null
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "This invitation is expired or has already been used.",
+            );
+          }
+
+          transaction.create(memberRef, {
+            role: "member",
+            joinedAt: FieldValue.serverTimestamp(),
+          });
+
+          transaction.set(membershipIndexRef, {
+            joinedAt: FieldValue.serverTimestamp(),
+          });
+
+          transaction.update(inviteRef, {
+            usedBy: uid,
+            usedAt: FieldValue.serverTimestamp(),
+          });
+
+          return {
+            groupId,
+            status: "joined",
+          };
+        },
+      );
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      // Do not log the invitation code or the raw database error,
+      // which could contain the invitation document path.
+      logger.error("joinGroup failed");
+
+      throw new HttpsError(
+        "internal",
+        "The group could not be joined. Please try again.",
+      );
+    }
   },
 );
