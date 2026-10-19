@@ -28,6 +28,7 @@ const {
   createGroup,
   createGroupInvite,
   joinGroup,
+  leaveGroup,
 } = require("../lib/index.js");
 
 const {
@@ -41,6 +42,7 @@ const db = getFirestore();
 const wrappedCreateGroup = functionsTest.wrap(createGroup);
 const wrappedCreateGroupInvite = functionsTest.wrap(createGroupInvite);
 const wrappedJoinGroup = functionsTest.wrap(joinGroup);
+const wrappedLeaveGroup = functionsTest.wrap(leaveGroup);
 
 function callAsOwner(data) {
   return wrappedCreateGroup({
@@ -687,3 +689,258 @@ test(
     await assertNoJoinRecords(fixture.groupId, loserUid);
   },
 );
+function callLeaveAs(uid, data) {
+  return wrappedLeaveGroup({
+    data,
+    auth: {
+      uid,
+      token: {},
+    },
+  });
+}
+
+async function createLeaveFixture() {
+  const fixture = await createJoinFixture();
+
+  await callJoinAs("member-b", {
+    inviteCode: fixture.inviteCode,
+  });
+
+  return fixture;
+}
+
+async function assertMemberRecordsExist(groupId, uid) {
+  const member = await db
+    .collection("groups")
+    .doc(groupId)
+    .collection("members")
+    .doc(uid)
+    .get();
+
+  const index = await membershipIndexRef(uid, groupId).get();
+
+  assert.equal(member.exists, true);
+  assert.equal(index.exists, true);
+}
+
+test("leave: rejects a signed-out caller without removing membership", async () => {
+  const fixture = await createLeaveFixture();
+
+  await assert.rejects(
+    () => wrappedLeaveGroup({
+      data: {groupId: fixture.groupId},
+    }),
+    (error) => error.code === "unauthenticated",
+  );
+
+  await assertMemberRecordsExist(fixture.groupId, "member-b");
+});
+
+const invalidLeaveInputs = [
+  ["missing payload", undefined],
+  ["null payload", null],
+  ["array payload", []],
+  ["missing group ID", {}],
+  ["non-text group ID", {groupId: 123}],
+  ["empty group ID", {groupId: ""}],
+  ["group ID containing a slash", {groupId: "groups/example"}],
+  ["oversized group ID", {groupId: "a".repeat(129)}],
+];
+
+for (const [label, input] of invalidLeaveInputs) {
+  test(`leave: rejects ${label} without removing membership`, async () => {
+    const fixture = await createLeaveFixture();
+
+    await assert.rejects(
+      () => callLeaveAs("member-b", input),
+      (error) => error.code === "invalid-argument",
+    );
+
+    await assertMemberRecordsExist(fixture.groupId, "member-b");
+  });
+}
+
+test("leave: removes the caller's records but preserves the group and owner", async () => {
+  const fixture = await createLeaveFixture();
+  const inviteBefore = await fixture.inviteRef.get();
+
+  const result = await callLeaveAs("member-b", {
+    groupId: fixture.groupId,
+    uid: "owner-a",
+    memberUid: "owner-a",
+  });
+
+  assert.deepEqual(result, {
+    groupId: fixture.groupId,
+    status: "left",
+  });
+
+  await assertNoJoinRecords(fixture.groupId, "member-b");
+  await assertMemberRecordsExist(fixture.groupId, "owner-a");
+
+  const group = await fixture.groupRef.get();
+  assert.equal(group.exists, true);
+  assert.equal(group.get("ownerUid"), "owner-a");
+
+  const inviteAfter = await fixture.inviteRef.get();
+  assert.equal(inviteAfter.get("usedBy"), "member-b");
+  assert.ok(
+    inviteBefore.get("usedAt").isEqual(inviteAfter.get("usedAt")),
+  );
+});
+
+test("leave: repeating a completed leave returns already-left", async () => {
+  const fixture = await createLeaveFixture();
+
+  await callLeaveAs("member-b", {groupId: fixture.groupId});
+
+  const result = await callLeaveAs("member-b", {
+    groupId: fixture.groupId,
+  });
+
+  assert.deepEqual(result, {
+    groupId: fixture.groupId,
+    status: "already-left",
+  });
+
+  await assertNoJoinRecords(fixture.groupId, "member-b");
+});
+
+test("leave: removes a stale discovery index without membership", async () => {
+  const fixture = await createJoinFixture();
+
+  await membershipIndexRef("outsider-c", fixture.groupId).set({
+    joinedAt: "stale",
+  });
+
+  const result = await callLeaveAs("outsider-c", {
+    groupId: fixture.groupId,
+  });
+
+  assert.equal(result.status, "already-left");
+  await assertNoJoinRecords(fixture.groupId, "outsider-c");
+  await assertMemberRecordsExist(fixture.groupId, "owner-a");
+});
+
+test("leave: removes membership even if the discovery index is missing", async () => {
+  const fixture = await createLeaveFixture();
+
+  await membershipIndexRef("member-b", fixture.groupId).delete();
+
+  const result = await callLeaveAs("member-b", {
+    groupId: fixture.groupId,
+  });
+
+  assert.equal(result.status, "left");
+  await assertNoJoinRecords(fixture.groupId, "member-b");
+});
+
+test("leave: blocks the owner and preserves both owner records", async () => {
+  const fixture = await createJoinFixture();
+
+  await assert.rejects(
+    () => callLeaveAs("owner-a", {groupId: fixture.groupId}),
+    (error) => error.code === "failed-precondition",
+  );
+
+  await assertMemberRecordsExist(fixture.groupId, "owner-a");
+});
+
+test("leave: blocks the owner even if their membership is missing", async () => {
+  const fixture = await createJoinFixture();
+
+  await fixture.groupRef
+    .collection("members")
+    .doc("owner-a")
+    .delete();
+
+  await assert.rejects(
+    () => callLeaveAs("owner-a", {groupId: fixture.groupId}),
+    (error) => error.code === "failed-precondition",
+  );
+
+  const index = await membershipIndexRef(
+    "owner-a",
+    fixture.groupId,
+  ).get();
+
+  assert.equal(index.exists, true);
+
+  const group = await fixture.groupRef.get();
+  assert.equal(group.get("ownerUid"), "owner-a");
+});
+
+test("leave: blocks an owner-role record even when ownerUid differs", async () => {
+  const fixture = await createLeaveFixture();
+
+  await fixture.groupRef
+    .collection("members")
+    .doc("member-b")
+    .update({role: "owner"});
+
+  await assert.rejects(
+    () => callLeaveAs("member-b", {groupId: fixture.groupId}),
+    (error) => error.code === "failed-precondition",
+  );
+
+  await assertMemberRecordsExist(fixture.groupId, "member-b");
+});
+
+test("leave: an outsider cannot remove another user's records", async () => {
+  const fixture = await createLeaveFixture();
+
+  const result = await callLeaveAs("outsider-c", {
+    groupId: fixture.groupId,
+    uid: "member-b",
+    memberUid: "member-b",
+  });
+
+  assert.equal(result.status, "already-left");
+
+  await assertMemberRecordsExist(fixture.groupId, "member-b");
+  await assertMemberRecordsExist(fixture.groupId, "owner-a");
+});
+
+test("leave: cleans up non-owner membership when the group is missing", async () => {
+  const fixture = await createLeaveFixture();
+
+  await fixture.groupRef.delete();
+
+  const result = await callLeaveAs("member-b", {
+    groupId: fixture.groupId,
+  });
+
+  assert.equal(result.status, "left");
+  await assertNoJoinRecords(fixture.groupId, "member-b");
+});
+
+test("leave: handles a missing group and missing records", async () => {
+  const result = await callLeaveAs("member-b", {
+    groupId: "missing-group",
+  });
+
+  assert.deepEqual(result, {
+    groupId: "missing-group",
+    status: "already-left",
+  });
+
+  await assertNoJoinRecords("missing-group", "member-b");
+});
+
+test("leave: a consumed invitation cannot be reused to rejoin", async () => {
+  const fixture = await createLeaveFixture();
+
+  await callLeaveAs("member-b", {groupId: fixture.groupId});
+
+  await assert.rejects(
+    () => callJoinAs("member-b", {
+      inviteCode: fixture.inviteCode,
+    }),
+    (error) => error.code === "failed-precondition",
+  );
+
+  await assertNoJoinRecords(fixture.groupId, "member-b");
+
+  const invite = await fixture.inviteRef.get();
+  assert.equal(invite.get("usedBy"), "member-b");
+});

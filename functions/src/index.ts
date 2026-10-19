@@ -387,3 +387,99 @@ export const joinGroup = onCall(
     }
   },
 );
+interface LeaveGroupResult {
+  groupId: string;
+  status: "left" | "already-left";
+}
+
+export const leaveGroup = onCall(
+  async (request): Promise<LeaveGroupResult> => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in before leaving a group.",
+      );
+    }
+
+    const data: unknown = request.data;
+
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      Array.isArray(data)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid group ID.",
+      );
+    }
+
+    const input = data as Record<string, unknown>;
+
+    if (
+      typeof input.groupId !== "string" ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(input.groupId)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Provide a valid group ID.",
+      );
+    }
+
+    const uid = request.auth.uid;
+    const groupId = input.groupId;
+    const groupRef = db.collection("groups").doc(groupId);
+    const memberRef = groupRef.collection("members").doc(uid);
+    const membershipIndexRef = db
+      .collection("users")
+      .doc(uid)
+      .collection("groupMemberships")
+      .doc(groupId);
+
+    try {
+      return await db.runTransaction(
+        async (transaction): Promise<LeaveGroupResult> => {
+          const group = await transaction.get(groupRef);
+          const membership = await transaction.get(memberRef);
+
+          const ownsGroup =
+            group.exists && group.get("ownerUid") === uid;
+
+          const hasOwnerRole =
+            membership.exists && membership.get("role") === "owner";
+
+          if (ownsGroup || hasOwnerRole) {
+            throw new HttpsError(
+              "failed-precondition",
+              "The group owner cannot leave. Ownership transfer is not available yet.",
+            );
+          }
+
+          if (membership.exists) {
+            transaction.delete(memberRef);
+          }
+
+          transaction.delete(membershipIndexRef);
+
+          return {
+            groupId,
+            status: membership.exists ? "left" : "already-left",
+          };
+        },
+      );
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      logger.error("leaveGroup failed", {
+        groupId,
+      });
+
+      throw new HttpsError(
+        "internal",
+        "The group could not be left. Please try again.",
+      );
+    }
+  },
+);
