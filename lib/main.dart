@@ -1,7 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:flutter/foundation.dart';
 import 'colors.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
@@ -13,11 +16,56 @@ import 'services/auth_service.dart';
 import 'services/firestore_habit_service.dart';
 import 'services/firestore_progress_service.dart';
 import 'services/user_profile_service.dart';
+import 'providers/group_provider.dart';
+import 'services/firestore_group_service.dart';
+import 'services/group_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  const useFirebaseEmulators = bool.fromEnvironment(
+    'USE_FIREBASE_EMULATORS',
+    defaultValue: false,
+  );
+
+  const emulatorHost = String.fromEnvironment(
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: '127.0.0.1',
+  );
+
+  if (useFirebaseEmulators) {
+    if (kReleaseMode) {
+      throw StateError('Firebase emulator mode is disabled in release builds.');
+    }
+
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'fake-api-key',
+          appId: '1:1234567890:web:demo',
+          messagingSenderId: '1234567890',
+          projectId: 'demo-catholic-habits',
+          authDomain: 'demo-catholic-habits.firebaseapp.com',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp(demoProjectId: 'demo-catholic-habits');
+    }
+
+    if (Firebase.app().options.projectId != 'demo-catholic-habits') {
+      throw StateError('The app did not initialize with the demo project.');
+    }
+
+    FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
+
+    await FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
+
+    FirebaseFunctions.instance.useFunctionsEmulator(emulatorHost, 5001);
+  } else {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   final authService = AuthService();
   final userProfileService = UserProfileService();
@@ -27,6 +75,7 @@ Future<void> main() async {
       providers: [
         Provider<AuthService>.value(value: authService),
         Provider<UserProfileService>.value(value: userProfileService),
+        Provider<GroupService>(create: (_) => FirestoreGroupService()),
         // HabitProvider must be registered before ProgressProvider so the
         // ProxyProvider below can depend on it.
         ChangeNotifierProvider(
@@ -34,6 +83,19 @@ Future<void> main() async {
             authService: authService,
             profileService: userProfileService,
           ),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, GroupProvider>(
+          lazy: false,
+          create: (context) => GroupProvider(context.read<GroupService>()),
+          update: (_, authProvider, groupProvider) {
+            final groups = groupProvider!;
+
+            groups.syncAccount(
+              uid: useFirebaseEmulators ? authProvider.user?.uid : null,
+            );
+
+            return groups;
+          },
         ),
 
         ChangeNotifierProxyProvider<AuthProvider, HabitProvider>(

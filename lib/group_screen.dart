@@ -1,71 +1,201 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'providers/auth_provider.dart';
+import 'widgets/create_group_dialog.dart';
 import 'colors.dart';
-import 'providers/progress_provider.dart';
+import 'models/group.dart';
+import 'providers/group_provider.dart';
+import 'widgets/join_group_dialog.dart';
+import 'widgets/group_invitation_dialog.dart';
+import 'widgets/leave_group_dialog.dart';
 
-class GroupScreen extends StatefulWidget {
+class GroupScreen extends StatelessWidget {
   const GroupScreen({super.key});
 
-  @override
-  State<GroupScreen> createState() => _GroupScreenState();
-}
+  static const _useFirebaseEmulators = bool.fromEnvironment(
+    'USE_FIREBASE_EMULATORS',
+    defaultValue: false,
+  );
 
-class _GroupScreenState extends State<GroupScreen> {
-  final List<_GroupInfo> _groups = const [
-    _GroupInfo(
-      id: 'fraternity',
-      name: 'Friday Fraternity',
-      subtitle: 'Weekly brotherhood and accountability',
-      icon: Icons.groups_2_outlined,
-      accentColor: OraColors.primary,
-      meetingText: 'Friday at 7:00 PM',
-      discussionPrompt: 'Share one grace from this week.',
-      prayerPrompt: 'Pray for perseverance in daily discipline.',
-    ),
-    _GroupInfo(
-      id: 'early_risers',
-      name: 'Early Risers',
-      subtitle: 'Men building a faithful morning routine',
-      icon: Icons.wb_sunny_outlined,
-      accentColor: OraColors.gold,
-      meetingText: 'Wednesday at 6:30 AM',
-      discussionPrompt: 'What helped you start the day well today?',
-      prayerPrompt: 'Offer your morning prayer for another brother.',
-    ),
-    _GroupInfo(
-      id: 'scripture_circle',
-      name: 'Scripture Circle',
-      subtitle: 'Daily Scripture and reflection together',
-      icon: Icons.menu_book_outlined,
-      accentColor: OraColors.primaryDeep,
-      meetingText: 'Sunday at 8:00 PM',
-      discussionPrompt: 'Share a passage that stayed with you this week.',
-      prayerPrompt: 'Pray for deeper attentiveness to the Word.',
-    ),
-  ];
+  Future<void> _createGroup(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<GroupProvider>();
+    final uid = auth.user?.uid;
+    final sessionVersion = auth.sessionVersion;
 
-  int _selectedGroupIndex = 0;
+    if (uid == null || provider.isLoading || provider.isSubmitting) {
+      return;
+    }
+
+    final input = await showDialog<CreateGroupInput>(
+      context: context,
+      builder: (_) => const CreateGroupDialog(),
+    );
+
+    if (!context.mounted || input == null) return;
+
+    // Do not submit a form opened under another signed-in account.
+    if (auth.user?.uid != uid || auth.sessionVersion != sessionVersion) {
+      return;
+    }
+
+    await provider.createGroup(
+      name: input.name,
+      description: input.description,
+    );
+  }
+
+  Future<void> _joinGroup(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<GroupProvider>();
+    final uid = auth.user?.uid;
+    final sessionVersion = auth.sessionVersion;
+
+    if (uid == null || provider.isLoading || provider.isSubmitting) {
+      return;
+    }
+
+    final inviteCode = await showDialog<String>(
+      context: context,
+      builder: (_) => const JoinGroupDialog(),
+    );
+
+    if (!context.mounted || inviteCode == null) return;
+
+    // Do not submit a form opened under another signed-in account.
+    if (auth.user?.uid != uid || auth.sessionVersion != sessionVersion) {
+      return;
+    }
+
+    await provider.joinGroup(inviteCode: inviteCode);
+  }
+
+  Future<void> _createInvitation(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<GroupProvider>();
+    final uid = auth.user?.uid;
+    final sessionVersion = auth.sessionVersion;
+    final group = provider.selectedGroup;
+
+    if (uid == null ||
+        group == null ||
+        !group.isOwner ||
+        provider.isLoading ||
+        provider.isSubmitting) {
+      return;
+    }
+
+    final invitation = await provider.createGroupInvite(groupId: group.id);
+
+    if (!context.mounted || invitation == null) return;
+    if (auth.user?.uid != uid || auth.sessionVersion != sessionVersion) {
+      return;
+    }
+
+    final currentGroup = provider.selectedGroup;
+
+    if (currentGroup?.id != group.id || !currentGroup!.isOwner) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final currentAuth = dialogContext.watch<AuthProvider>();
+        final currentUid = currentAuth.user?.uid;
+        final selected = dialogContext.watch<GroupProvider>().selectedGroup;
+
+        final canDisplay =
+            currentUid == uid &&
+            currentAuth.sessionVersion == sessionVersion &&
+            selected?.id == group.id &&
+            selected?.isOwner == true;
+
+        if (!canDisplay) {
+          return AlertDialog(
+            title: const Text('Invitation hidden'),
+            content: const Text(
+              'The signed-in account or selected group changed. '
+              'This invitation is no longer displayed.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        }
+
+        return GroupInvitationDialog(
+          groupName: group.name,
+          invitation: invitation,
+        );
+      },
+    );
+  }
+
+  Future<void> _leaveGroup(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<GroupProvider>();
+    final uid = auth.user?.uid;
+    final sessionVersion = auth.sessionVersion;
+    final group = provider.selectedGroup;
+
+    if (uid == null ||
+        group == null ||
+        group.isOwner ||
+        provider.isLoading ||
+        provider.isSubmitting) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => LeaveGroupDialog(groupName: group.name),
+    );
+
+    if (!context.mounted || confirmed != true) return;
+    if (auth.user?.uid != uid || auth.sessionVersion != sessionVersion) {
+      return;
+    }
+
+    final currentGroup = provider.selectedGroup;
+
+    if (currentGroup == null ||
+        currentGroup.id != group.id ||
+        currentGroup.isOwner ||
+        provider.isLoading ||
+        provider.isSubmitting) {
+      return;
+    }
+
+    await provider.leaveGroup(groupId: group.id);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_useFirebaseEmulators) {
+      return const Scaffold(
+        backgroundColor: OraColors.background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Groups are not available in this build yet.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final provider = context.watch<GroupProvider>();
     final textTheme = Theme.of(context).textTheme;
-    final selectedGroup = _groups[_selectedGroupIndex];
-
-    final completedToday = context.select<ProgressProvider, int>(
-      (provider) => provider.completedCount,
-    );
-    final totalHabits = context.select<ProgressProvider, int>(
-      (provider) => provider.totalCount,
-    );
-    final currentStreak = context.select<ProgressProvider, int>(
-      (provider) => provider.currentStreak,
-    );
-    final weeklyPercent = context.select<ProgressProvider, double>(
-      (provider) => provider.weeklyCompletionPercent,
-    );
-
-    final weeklyPercentLabel = '${(weeklyPercent * 100).round()}%';
+    final selectedGroup = provider.selectedGroup;
+    final busy = provider.isLoading || provider.isSubmitting;
 
     return Scaffold(
       backgroundColor: OraColors.background,
@@ -73,437 +203,188 @@ class _GroupScreenState extends State<GroupScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
           children: [
-            Text(
-              'Your Groups',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a group to view its brotherhood, challenges, and community details.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: OraColors.muted,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 118,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _groups.length,
-                separatorBuilder: (_, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final group = _groups[index];
-                  final isSelected = index == _selectedGroupIndex;
-
-                  return _GroupSelectorCard(
-                    group: group,
-                    isSelected: isSelected,
-                    onTap: () {
-                      setState(() {
-                        _selectedGroupIndex = index;
-                      });
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-            _GroupHeroCard(
-              group: selectedGroup,
-              completedToday: completedToday,
-              totalHabits: totalHabits,
-              currentStreak: currentStreak,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Group Preview',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This space shows how accountability, discussion, and shared prayer could work inside ${selectedGroup.name}.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: OraColors.muted,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              child: Column(
-                children: [
-                  _GroupMemberTile(
-                    icon: Icons.person_outline_rounded,
-                    iconColor: selectedGroup.accentColor,
-                    name: 'You',
-                    status:
-                        'Completed $completedToday of $totalHabits habits today',
-                    trailingText: currentStreak > 0
-                        ? '$currentStreak day streak'
-                        : 'Starting fresh',
-                  ),
-                  const Divider(height: 1),
-                  _GroupMemberTile(
-                    icon: Icons.groups_outlined,
-                    iconColor: selectedGroup.accentColor,
-                    name: 'Shared Accountability',
-                    status:
-                        'Encourage one another, notice consistency, and stay committed together.',
-                    trailingText: 'Preview',
-                  ),
-                  const Divider(height: 1),
-                  _GroupMemberTile(
-                    icon: Icons.forum_outlined,
-                    iconColor: OraColors.primary,
-                    name: 'Discussion Space',
-                    status:
-                        'A place for reflections, check-ins, and weekly conversation.',
-                    trailingText: 'Preview',
-                  ),
-                  const Divider(height: 1),
-                  _GroupMemberTile(
-                    icon: Icons.favorite_outline_rounded,
-                    iconColor: OraColors.gold,
-                    name: 'Prayer Support',
-                    status:
-                        'Members can share intentions and pray for one another here.',
-                    trailingText: 'Preview',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Challenges',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _ChallengeCard(
-              title: '${selectedGroup.name} Weekly Goal',
-              subtitle:
-                  'You are at $weeklyPercentLabel of your weekly habit goal within this season of formation.',
-              icon: Icons.calendar_today_outlined,
-              accentColor: selectedGroup.accentColor,
-            ),
-            const SizedBox(height: 12),
-            _ChallengeCard(
-              title: completedToday == totalHabits
-                  ? 'Daily Rule Complete'
-                  : 'Finish Today Strong',
-              subtitle: completedToday == totalHabits
-                  ? 'You completed all your habits today. Bring that consistency into ${selectedGroup.name}.'
-                  : 'You have completed $completedToday of $totalHabits habits today. Stay steady and finish well.',
-              icon: completedToday == totalHabits
-                  ? Icons.emoji_events_outlined
-                  : Icons.flag_outlined,
-              accentColor: completedToday == totalHabits
-                  ? OraColors.gold
-                  : selectedGroup.accentColor,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'What This Group Offers',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SectionCard(
-              child: Column(
-                children: [
-                  const _SimpleActionTile(
-                    icon: Icons.forum_outlined,
-                    title: 'Discussion',
-                    subtitle:
-                        'A future space for Scripture reflections, wins, and honest check-ins.',
-                  ),
-                  const Divider(height: 1),
-                  _SimpleActionTile(
-                    icon: Icons.event_outlined,
-                    title: 'Meeting Rhythm',
-                    subtitle: selectedGroup.meetingText,
-                  ),
-                  const Divider(height: 1),
-                  _SimpleActionTile(
-                    icon: Icons.volunteer_activism_outlined,
-                    title: 'Prayer Intentions',
-                    subtitle: selectedGroup.prayerPrompt,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GroupInfo {
-  final String id;
-  final String name;
-  final String subtitle;
-  final IconData icon;
-  final Color accentColor;
-  final String meetingText;
-  final String discussionPrompt;
-  final String prayerPrompt;
-
-  const _GroupInfo({
-    required this.id,
-    required this.name,
-    required this.subtitle,
-    required this.icon,
-    required this.accentColor,
-    required this.meetingText,
-    required this.discussionPrompt,
-    required this.prayerPrompt,
-  });
-}
-
-class _GroupSelectorCard extends StatelessWidget {
-  final _GroupInfo group;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _GroupSelectorCard({
-    required this.group,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 220,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? group.accentColor : OraColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? group.accentColor
-                : OraColors.primary.withValues(alpha: 0.08),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? group.accentColor.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              group.icon,
-              color: isSelected ? Colors.white : group.accentColor,
-              size: 24,
-            ),
-            const Spacer(),
-            Text(
-              group.name,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : OraColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              group.subtitle,
-              style: textTheme.bodySmall?.copyWith(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.86)
-                    : OraColors.muted,
-                height: 1.35,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GroupHeroCard extends StatelessWidget {
-  final _GroupInfo group;
-  final int completedToday;
-  final int totalHabits;
-  final int currentStreak;
-
-  const _GroupHeroCard({
-    required this.group,
-    required this.completedToday,
-    required this.totalHabits,
-    required this.currentStreak,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [group.accentColor, OraColors.primaryDeep],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: group.accentColor.withValues(alpha: 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  group.name,
-                  style: textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+                Expanded(
+                  child: Text(
+                    'Your Groups',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: OraColors.text,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Grow stronger together.',
-                  style: textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  currentStreak > 0
-                      ? 'You have completed $completedToday of $totalHabits habits today and are on a $currentStreak-day streak in this season of brotherhood.'
-                      : 'You have completed $completedToday of $totalHabits habits today. Start building momentum with ${group.name}.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.88),
-                    height: 1.5,
-                  ),
+                IconButton(
+                  tooltip: 'Refresh groups',
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          await context.read<GroupProvider>().refresh();
+                        },
+                  icon: const Icon(Icons.refresh_rounded),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            const SizedBox(height: 8),
+            Text(
+              'View your memberships and choose a group.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: OraColors.muted,
+                height: 1.45,
+              ),
             ),
-            child: Icon(group.icon, color: Colors.white, size: 26),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          await _createGroup(context);
+                        },
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create a group'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          await _joinGroup(context);
+                        },
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('Join a group'),
+                ),
+              ],
+            ),
+            if (provider.isSubmitting) ...[
+              const SizedBox(height: 16),
+              const LinearProgressIndicator(),
+              const SizedBox(height: 8),
+              const Text('Updating your groups…'),
+            ],
+            const SizedBox(height: 20),
+            if (provider.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading your groups…'),
+                  ],
+                ),
+              )
+            else if (provider.errorMessage != null)
+              _GroupMessageCard(
+                icon: Icons.error_outline_rounded,
+                title: 'Group request could not be completed',
+                message: provider.errorMessage!,
+                action: FilledButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () async {
+                          await context.read<GroupProvider>().refresh();
+                        },
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                ),
+              )
+            else if (!provider.isLoaded)
+              const _GroupMessageCard(
+                icon: Icons.hourglass_empty_rounded,
+                title: 'Getting your groups ready',
+                message: 'Your membership list has not loaded yet.',
+              )
+            else if (!provider.hasGroups)
+              const _GroupMessageCard(
+                icon: Icons.groups_outlined,
+                title: 'No groups yet',
+                message:
+                    'You do not belong to any groups yet. '
+                    'Create a group or join using an invitation from its owner.',
+              )
+            else ...[
+              for (final group in provider.groups) ...[
+                Card(
+                  color: OraColors.surface,
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    selected: group.id == provider.selectedGroupId,
+                    selectedTileColor: OraColors.primary.withValues(
+                      alpha: 0.08,
+                    ),
+                    leading: const Icon(
+                      Icons.groups_outlined,
+                      color: OraColors.primary,
+                    ),
+                    title: Text(
+                      group.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(group.isOwner ? 'Owner' : 'Member'),
+                    trailing: group.id == provider.selectedGroupId
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: OraColors.primary,
+                          )
+                        : null,
+                    onTap: busy
+                        ? null
+                        : () {
+                            context.read<GroupProvider>().selectGroup(group.id);
+                          },
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (selectedGroup != null) ...[
+                const SizedBox(height: 16),
+                _GroupDetailsCard(group: selectedGroup),
+                if (selectedGroup.isOwner) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              await _createInvitation(context);
+                            },
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: const Text('Create invitation'),
+                    ),
+                  ),
+                ],
+                if (!selectedGroup.isOwner) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: busy
+                          ? null
+                          : () async {
+                              await _leaveGroup(context);
+                            },
+                      icon: const Icon(Icons.exit_to_app_rounded),
+                      label: const Text('Leave group'),
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final Widget child;
+class _GroupDetailsCard extends StatelessWidget {
+  const _GroupDetailsCard({required this.group});
 
-  const _SectionCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(color: OraColors.surface, child: child);
-  }
-}
-
-class _GroupMemberTile extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String name;
-  final String status;
-  final String trailingText;
-
-  const _GroupMemberTile({
-    required this.icon,
-    required this.iconColor,
-    required this.name,
-    required this.status,
-    required this.trailingText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 20,
-        backgroundColor: iconColor.withValues(alpha: 0.12),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        name,
-        style: textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: OraColors.text,
-        ),
-      ),
-      subtitle: Text(
-        status,
-        style: textTheme.bodySmall?.copyWith(
-          color: OraColors.muted,
-          height: 1.35,
-        ),
-      ),
-      trailing: Text(
-        trailingText,
-        style: textTheme.labelMedium?.copyWith(
-          color: iconColor,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _ChallengeCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accentColor;
-
-  const _ChallengeCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accentColor,
-  });
+  final Group group;
 
   @override
   Widget build(BuildContext context) {
@@ -512,48 +393,38 @@ class _ChallengeCard extends StatelessWidget {
     return Card(
       color: OraColors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: accentColor),
+            Text(
+              'Selected group',
+              style: textTheme.labelLarge?.copyWith(color: OraColors.muted),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: OraColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: OraColors.muted,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Open preview',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: accentColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 8),
+            Text(
+              group.name,
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              group.description.trim().isEmpty
+                  ? 'No description provided.'
+                  : group.description,
+              style: textTheme.bodyMedium?.copyWith(
+                color: OraColors.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              group.isOwner ? 'Your role: Owner' : 'Your role: Member',
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: OraColors.primary,
               ),
             ),
           ],
@@ -563,35 +434,51 @@ class _ChallengeCard extends StatelessWidget {
   }
 }
 
-class _SimpleActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _SimpleActionTile({
+class _GroupMessageCard extends StatelessWidget {
+  const _GroupMessageCard({
     required this.icon,
     required this.title,
-    required this.subtitle,
+    required this.message,
+    this.action,
   });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return ListTile(
-      leading: Icon(icon, color: OraColors.primary),
-      title: Text(
-        title,
-        style: textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: OraColors.text,
+    return Card(
+      color: OraColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: OraColors.primary, size: 32),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: OraColors.text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: textTheme.bodyMedium?.copyWith(
+                color: OraColors.muted,
+                height: 1.45,
+              ),
+            ),
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ],
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: textTheme.bodySmall?.copyWith(color: OraColors.muted),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: OraColors.muted),
     );
   }
 }
