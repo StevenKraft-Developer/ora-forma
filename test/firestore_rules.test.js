@@ -18,6 +18,7 @@ const {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } = require("firebase/firestore");
 
 let testEnv;
@@ -399,4 +400,182 @@ describe("Group membership access", () => {
     await assertFails(updateDoc(invite, {groupId: "another-group"}));
     await assertFails(deleteDoc(invite));
   });
+
+  describe("Habit onboarding metadata", () => {
+  const ownerUid = "onboarding-owner";
+  const otherUid = "onboarding-other";
+
+  test("owner can save selected habits and completion in one batch", async () => {
+    const db = testEnv.authenticatedContext(ownerUid).firestore();
+    const habit = doc(
+      db,
+      "users",
+      ownerUid,
+      "habits",
+      "morning_prayer",
+    );
+    const metadata = doc(db, "users", ownerUid, "meta", "habits");
+
+    const batch = writeBatch(db);
+
+    batch.set(habit, {
+      title: "Morning Prayer",
+      description: null,
+      sortOrder: 0,
+      isArchived: false,
+    });
+
+    batch.set(
+      metadata,
+      {
+        initialized: true,
+        onboardingCompleted: true,
+      },
+      { merge: true },
+    );
+
+    await assertSucceeds(batch.commit());
+
+    const habitSnapshot = await assertSucceeds(getDoc(habit));
+    const metadataSnapshot = await assertSucceeds(getDoc(metadata));
+
+    expect(habitSnapshot.data().title).toBe("Morning Prayer");
+    expect(metadataSnapshot.data()).toMatchObject({
+      initialized: true,
+      onboardingCompleted: true,
+    });
+  });
+
+  test("normal metadata merge preserves completed onboarding", async () => {
+    const db = testEnv.authenticatedContext(ownerUid).firestore();
+    const metadata = doc(db, "users", ownerUid, "meta", "habits");
+
+    await assertSucceeds(
+      setDoc(metadata, {
+        initialized: true,
+        onboardingCompleted: true,
+        marker: "preserve-me",
+      }),
+    );
+
+    await assertSucceeds(
+      setDoc(
+        metadata,
+        { initialized: true },
+        { merge: true },
+      ),
+    );
+
+    const snapshot = await assertSucceeds(getDoc(metadata));
+
+    expect(snapshot.data()).toMatchObject({
+      initialized: true,
+      onboardingCompleted: true,
+      marker: "preserve-me",
+    });
+  });
+
+  test("catalog initialization alone does not mark onboarding complete", async () => {
+    const db = testEnv.authenticatedContext(ownerUid).firestore();
+    const metadata = doc(db, "users", ownerUid, "meta", "habits");
+
+    await assertSucceeds(
+      setDoc(
+        metadata,
+        { initialized: true },
+        { merge: true },
+      ),
+    );
+
+    const snapshot = await assertSucceeds(getDoc(metadata));
+
+    expect(snapshot.data().initialized).toBe(true);
+    expect(snapshot.data().onboardingCompleted).toBeUndefined();
+  });
+
+  test.each([
+    ["another account", otherUid],
+    ["a signed-out client", null],
+  ])("%s cannot read or change onboarding metadata", async (_, uid) => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), "users", ownerUid, "meta", "habits"),
+        {
+          initialized: true,
+          onboardingCompleted: true,
+        },
+      );
+    });
+
+    const context = uid === null
+      ? testEnv.unauthenticatedContext()
+      : testEnv.authenticatedContext(uid);
+
+    const db = context.firestore();
+    const metadata = doc(db, "users", ownerUid, "meta", "habits");
+
+    await assertFails(getDoc(metadata));
+
+    await assertFails(
+      setDoc(
+        metadata,
+        { onboardingCompleted: false },
+        { merge: true },
+      ),
+    );
+
+    await assertFails(deleteDoc(metadata));
+  });
+
+  test("denied cross-account batch does not save the caller's habit", async () => {
+    const db = testEnv.authenticatedContext(otherUid).firestore();
+
+    const ownHabit = doc(
+      db,
+      "users",
+      otherUid,
+      "habits",
+      "morning_prayer",
+    );
+
+    const foreignMetadata = doc(
+      db,
+      "users",
+      ownerUid,
+      "meta",
+      "habits",
+    );
+
+    const batch = writeBatch(db);
+
+    batch.set(ownHabit, {
+      title: "Morning Prayer",
+      description: null,
+      sortOrder: 0,
+      isArchived: false,
+    });
+
+    batch.set(
+      foreignMetadata,
+      {
+        initialized: true,
+        onboardingCompleted: true,
+      },
+      { merge: true },
+    );
+
+    await assertFails(batch.commit());
+
+    const ownSnapshot = await assertSucceeds(getDoc(ownHabit));
+    expect(ownSnapshot.exists()).toBe(false);
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const foreignSnapshot = await getDoc(
+        doc(context.firestore(), "users", ownerUid, "meta", "habits"),
+      );
+
+      expect(foreignSnapshot.exists()).toBe(false);
+    });
+  });
+});
 });

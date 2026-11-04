@@ -201,38 +201,30 @@ class _TodaySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final habitProvider = context.watch<HabitProvider>();
     final progress = context.watch<ProgressProvider>();
 
-    if (!progress.isLoaded) {
+    if (!habitProvider.isLoaded || !progress.isLoaded) {
       return const Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Source the habit list from HabitProvider. Task 8 converts this to a
-    // full dynamic loop; for now we preserve the five-card layout but read
-    // from the live provider instead of ProgressProvider.
-    final habits = context.watch<HabitProvider>().activeHabits;
-
-    // Guard: if HabitProvider hasn't loaded yet or has fewer cards than the
-    // hardcoded layout expects, show a loading state rather than crashing.
-    if (habits.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final habits = habitProvider.activeHabits;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            runSpacing: 4,
             children: [
               Text(
-                'Today\'s rule of life'.toUpperCase(),
+                "Today's rule of life".toUpperCase(),
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 13,
                   letterSpacing: 0.12,
@@ -240,7 +232,8 @@ class _TodaySection extends StatelessWidget {
                 ),
               ),
               Text(
-                '${progress.completedCount} of ${progress.totalCount} complete',
+                '${progress.completedCount} of '
+                '${progress.totalCount} complete',
                 style: textTheme.bodySmall?.copyWith(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -251,75 +244,46 @@ class _TodaySection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        _HabitCard(
-          icon: '🙏',
-          iconBackground: const LinearGradient(
-            colors: [Color(0xFFF7F1D9), Color(0xFFEFE4BB)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          title: habits[0].title,
-          subtitle: 'Completed at 6:20 AM · Scripture and intercessions',
-          isCompleted: progress.isHabitCompleted(habits[0].id),
-          onTap: () =>
-              context.read<ProgressProvider>().toggleHabit(habits[0].id),
-        ),
-        const SizedBox(height: 10),
-        _HabitCard(
-          icon: '📖',
-          iconBackground: const LinearGradient(
-            colors: [Color(0xFFF7F1D9), Color(0xFFEFE4BB)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          title: habits[1].title,
-          subtitle: '10 minutes today · Gospel of Matthew',
-          isCompleted: progress.isHabitCompleted(habits[1].id),
-          onTap: () =>
-              context.read<ProgressProvider>().toggleHabit(habits[1].id),
-        ),
-        const SizedBox(height: 10),
-        _HabitCard(
-          icon: '🥣',
-          iconBackground: const LinearGradient(
-            colors: [Color(0xFFEFE7D8), Color(0xFFE3D4BF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          title: habits[2].title,
-          subtitle: 'No snacking after 8 PM · Stay intentional today',
-          isCompleted: progress.isHabitCompleted(habits[2].id),
-          onTap: () =>
-              context.read<ProgressProvider>().toggleHabit(habits[2].id),
-        ),
-        const SizedBox(height: 10),
-        _HabitCard(
-          icon: '🏃',
-          iconBackground: const LinearGradient(
-            colors: [Color(0xFFDCE8DF), Color(0xFFCFE0D0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          title: habits[3].title,
-          subtitle: 'Completed · Strength and incline walk',
-          isCompleted: progress.isHabitCompleted(habits[3].id),
-          onTap: () =>
-              context.read<ProgressProvider>().toggleHabit(habits[3].id),
-        ),
-        const SizedBox(height: 10),
-        _HabitCard(
-          icon: '🌙',
-          iconBackground: const LinearGradient(
-            colors: [Color(0xFFF7F1D9), Color(0xFFEFE4BB)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          title: habits[4].title,
-          subtitle: 'Still ahead · Quiet review before bed',
-          isCompleted: progress.isHabitCompleted(habits[4].id),
-          onTap: () =>
-              context.read<ProgressProvider>().toggleHabit(habits[4].id),
-        ),
+        if (habits.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              habitProvider.archivedHabits.isNotEmpty
+                  ? 'All your habits are archived.'
+                  : 'No habits have been added yet.',
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          for (final habit in habits) ...[
+            _HabitCard(
+              key: ValueKey('home-habit-${habit.id}'),
+              icon: switch (habit.id) {
+                'morning_prayer' => '🙏',
+                'bible_reading' => '📖',
+                'clean_eating' => '🥣',
+                'exercise_30' => '🏃',
+                'evening_reflection' => '🌙',
+                _ => '✓',
+              },
+              iconBackground: const LinearGradient(
+                colors: [Color(0xFFF7F1D9), Color(0xFFEFE4BB)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              title: habit.title,
+              subtitle: habit.description?.trim().isNotEmpty == true
+                  ? habit.description!
+                  : progress.isHabitCompleted(habit.id)
+                  ? 'Completed today'
+                  : 'Tap to mark complete',
+              isCompleted: progress.isHabitCompleted(habit.id),
+              onTap: () {
+                context.read<ProgressProvider>().toggleHabit(habit.id);
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
       ],
     );
   }
@@ -334,6 +298,7 @@ class _HabitCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _HabitCard({
+    super.key,
     required this.icon,
     required this.iconBackground,
     required this.title,
@@ -445,27 +410,6 @@ class _HabitCard extends StatelessWidget {
 class _WeeklySection extends StatelessWidget {
   const _WeeklySection();
 
-  int _daysWithHabitsThisWeek(BuildContext context, List<String> habitIds) {
-    final now = DateTime.now();
-    final daysFromSunday = now.weekday % 7;
-    final startOfWeek = now.subtract(Duration(days: daysFromSunday));
-    final progress = context.read<ProgressProvider>();
-    int count = 0;
-    for (int i = 0; i < 7; i++) {
-      final day = startOfWeek.add(Duration(days: i));
-      final key =
-          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-      final dayProgress = progress.historyByDate[key];
-      if (dayProgress != null) {
-        final hasAny = habitIds.any(
-          (id) => dayProgress.completedHabitIds.contains(id),
-        );
-        if (hasAny) count++;
-      }
-    }
-    return count;
-  }
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -478,13 +422,7 @@ class _WeeklySection extends StatelessWidget {
       );
     }
 
-    final prayerDays = _daysWithHabitsThisWeek(context, [
-      'morning_prayer',
-      'bible_reading',
-      'evening_reflection',
-    ]);
-    final mealDays = _daysWithHabitsThisWeek(context, ['clean_eating']);
-    final workoutDays = _daysWithHabitsThisWeek(context, ['exercise_30']);
+    final summary = progress.weeklyRoutineSummary();
 
     return Container(
       decoration: BoxDecoration(
@@ -528,17 +466,23 @@ class _WeeklySection extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniStat(
-                  value: '$prayerDays/7',
-                  label: 'Prayer rhythm',
+                  value: '${summary.activeDays}/7',
+                  label: 'Days practiced',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _MiniStat(value: '$mealDays/7', label: 'Meals on plan'),
+                child: _MiniStat(
+                  value: '${summary.checkIns}',
+                  label: 'Check-ins',
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _MiniStat(value: '$workoutDays/5', label: 'Workouts'),
+                child: _MiniStat(
+                  value: '${summary.activeHabits}',
+                  label: 'Active habits',
+                ),
               ),
             ],
           ),

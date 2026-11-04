@@ -278,6 +278,44 @@ class ProgressProvider extends ChangeNotifier {
     });
   }
 
+  /// Summarizes the currently active routine from Sunday through [asOf].
+  ///
+  /// Archived/orphaned IDs and future dates are excluded.
+  /// Historical records are read without modification.
+  ({int activeDays, int checkIns, int activeHabits}) weeklyRoutineSummary({
+    DateTime? asOf,
+  }) {
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final daysFromSunday = today.weekday % 7;
+
+    final start = DateTime(today.year, today.month, today.day - daysFromSunday);
+
+    final activeIds = _activeHabits.map((habit) => habit.id).toSet();
+
+    var activeDays = 0;
+    var checkIns = 0;
+
+    for (var offset = 0; offset <= daysFromSunday; offset++) {
+      final date = DateTime(start.year, start.month, start.day + offset);
+
+      final completedIds =
+          _historyByDate[_dateKeyFor(date)]?.completedHabitIds ??
+          const <String>[];
+
+      final count = completedIds.where(activeIds.contains).toSet().length;
+
+      if (count > 0) activeDays++;
+      checkIns += count;
+    }
+
+    return (
+      activeDays: activeDays,
+      checkIns: checkIns,
+      activeHabits: activeIds.length,
+    );
+  }
+
   int get completedThisWeek {
     final startOfWeek = _startOfWeekSunday(DateTime.now());
     int total = 0;

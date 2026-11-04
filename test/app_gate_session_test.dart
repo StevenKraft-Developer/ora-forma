@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:catholic_habits/screens/onboarding/habit_onboarding_screen.dart';
+import 'package:catholic_habits/models/habit.dart';
+import 'package:catholic_habits/providers/habit_provider.dart';
 
 class _FakeAuthProvider extends ChangeNotifier implements AuthProvider {
   AppUser _currentUser = const AppUser(
@@ -82,13 +84,32 @@ UserProfile _profile(String uid) {
   );
 }
 
+class _FakeHabitProvider extends ChangeNotifier implements HabitProvider {
+  @override
+  bool get isLoading => false;
+
+  @override
+  bool get isLoaded => true;
+
+  @override
+  List<Habit> get allHabits => kDefaultCatholicHabitSet;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError('Unexpected habit call: ${invocation.memberName}');
+  }
+}
+
 class _GateHarness {
   final auth = _FakeAuthProvider();
   final service = _FakeProfileService();
-  final onboardingRequests = <Completer<bool>>[];
+  final onboardingRequests = <Completer<bool?>>[];
+  final habits = _FakeHabitProvider();
+  final onboardingUids = <String>[];
 
-  Future<bool> loadOnboarding() {
-    final request = Completer<bool>();
+  Future<bool?> loadOnboarding(String uid) {
+    final request = Completer<bool?>();
+    onboardingUids.add(uid);
     onboardingRequests.add(request);
     return request.future;
   }
@@ -108,6 +129,7 @@ class _GateHarness {
         providers: [
           ChangeNotifierProvider<AuthProvider>.value(value: auth),
           ChangeNotifierProvider<UserProfileProvider>.value(value: profiles),
+          ChangeNotifierProvider<HabitProvider>.value(value: habits),
         ],
         child: MaterialApp(home: AppGate(loadHabitOnboarding: loadOnboarding)),
       ),
@@ -129,6 +151,7 @@ class _GateHarness {
   void dispose() {
     profiles.dispose();
     auth.dispose();
+    habits.dispose();
   }
 }
 
@@ -385,6 +408,51 @@ void main() {
       find.text('Your profile is unavailable. Please try again.'),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('missing onboarding metadata requires review for each account', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final harness = _GateHarness();
+    addTearDown(harness.dispose);
+
+    await harness.mount(tester);
+    await harness.completeCurrentProfile(tester);
+
+    expect(harness.onboardingUids, ['user-a']);
+    expect(harness.onboardingRequests, hasLength(1));
+
+    harness.onboardingRequests[0].complete(null);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HabitOnboardingScreen), findsOneWidget);
+
+    final accountAScreen = tester.widget<HabitOnboardingScreen>(
+      find.byType(HabitOnboardingScreen),
+    );
+
+    expect(accountAScreen.initialHabits, kDefaultCatholicHabitSet);
+
+    await harness.beginSession(tester, 'user-b');
+    await harness.completeCurrentProfile(tester);
+
+    expect(harness.onboardingUids, ['user-a', 'user-b']);
+    expect(harness.onboardingRequests, hasLength(2));
+
+    harness.onboardingRequests[1].complete(null);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HabitOnboardingScreen), findsOneWidget);
+
+    final accountBScreen = tester.widget<HabitOnboardingScreen>(
+      find.byType(HabitOnboardingScreen),
+    );
+
+    expect(accountBScreen.key, isNot(accountAScreen.key));
     expect(tester.takeException(), isNull);
   });
 }

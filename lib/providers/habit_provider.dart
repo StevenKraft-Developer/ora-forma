@@ -31,6 +31,7 @@ class HabitProvider extends ChangeNotifier {
   List<Habit> _habits = [];
   bool _isLoading = false;
   bool _isLoaded = false;
+  bool _isSavingOnboarding = false;
 
   // ---------------------------------------------------------------------------
   // Public getters — always return defensive copies so callers cannot mutate
@@ -52,6 +53,7 @@ class HabitProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   bool get isLoaded => _isLoaded;
+  bool get isSavingOnboarding => _isSavingOnboarding;
 
   /// True when there is at least one habit (active or archived).
   bool get hasHabits => _habits.isNotEmpty;
@@ -72,6 +74,7 @@ class HabitProvider extends ChangeNotifier {
     _uid = uid;
     _isLoading = true;
     _isLoaded = false;
+    _isSavingOnboarding = false;
     _habits = [];
     notifyListeners();
 
@@ -278,17 +281,56 @@ class HabitProvider extends ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Seed from onboarding (used by HabitOnboardingScreen in Task 6)
   // ---------------------------------------------------------------------------
-
-  /// Replaces the entire habit list with [habits] and persists immediately.
+  /// Saves the selected catalog and onboarding completion for this account.
   ///
-  /// Called at the end of the onboarding flow when the user taps "Begin".
-  /// [habits] should already have sortOrder values set by the caller.
-  Future<void> seedFromOnboarding(List<Habit> habits) async {
-    _habits = List<Habit>.from(habits);
-    _sortHabits();
-    _isLoaded = true;
-    await _persist();
+  /// Returns false if the account is not ready, another onboarding save is
+  /// running, or this operation becomes obsolete.
+  ///
+  /// Current-session storage failures are rethrown for the UI to handle.
+  Future<bool> seedFromOnboarding(
+    List<Habit> habits, {
+    required String uid,
+  }) async {
+    if (_isDisposed ||
+        _uid != uid ||
+        !_isLoaded ||
+        _isLoading ||
+        _isSavingOnboarding) {
+      return false;
+    }
+
+    final version = _sessionVersion;
+    final selected = List<Habit>.from(habits);
+
+    _isSavingOnboarding = true;
     notifyListeners();
+
+    try {
+      // A listener could synchronously clear or change the account.
+      if (!_isCurrentSession(version, uid)) return false;
+
+      await _storage.saveHabits(
+        uid: uid,
+        habits: selected,
+        completeOnboarding: true,
+      );
+
+      if (!_isCurrentSession(version, uid)) return false;
+
+      _habits = selected;
+      _sortHabits();
+      _isLoaded = true;
+
+      return true;
+    } catch (_) {
+      if (!_isCurrentSession(version, uid)) return false;
+      rethrow;
+    } finally {
+      if (_isCurrentSession(version, uid)) {
+        _isSavingOnboarding = false;
+        notifyListeners();
+      }
+    }
   }
 
   /// Clears account-specific in-memory data at sign-out.
@@ -301,6 +343,7 @@ class HabitProvider extends ChangeNotifier {
     _habits = [];
     _isLoading = false;
     _isLoaded = false;
+    _isSavingOnboarding = false;
     notifyListeners();
   }
 
