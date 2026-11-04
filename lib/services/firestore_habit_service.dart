@@ -24,6 +24,24 @@ class FirestoreHabitService {
   ///
   /// Returns an empty list when initialization occurred but the user
   /// intentionally has no habits, preserving the previous storage contract.
+  /// Returns null when this account has no explicit onboarding decision.
+  ///
+  /// Catalog initialization alone does not imply onboarding completion.
+  Future<bool?> loadOnboardingComplete(String uid) async {
+    final snapshot = await _metaRef(uid).get();
+    final value = snapshot.data()?['onboardingCompleted'];
+
+    if (value == null) return null;
+
+    if (value is! bool) {
+      throw const FormatException(
+        'Habit metadata onboardingCompleted must be a boolean.',
+      );
+    }
+
+    return value;
+  }
+
   Future<List<Habit>?> loadHabits(String uid) async {
     final metaSnapshot = await _metaRef(uid).get();
 
@@ -51,14 +69,18 @@ class FirestoreHabitService {
   Future<void> saveHabits({
     required String uid,
     required List<Habit> habits,
+    bool completeOnboarding = false,
   }) async {
     final batch = _firestore.batch();
     final habitsRef = _habitsRef(uid);
 
     final existing = await habitsRef.get();
+    final retainedIds = habits.map((habit) => habit.id).toSet();
 
     for (final document in existing.docs) {
-      batch.delete(document.reference);
+      if (!retainedIds.contains(document.id)) {
+        batch.delete(document.reference);
+      }
     }
 
     for (final habit in habits) {
@@ -73,6 +95,7 @@ class FirestoreHabitService {
 
     batch.set(_metaRef(uid), {
       'initialized': true,
+      if (completeOnboarding) 'onboardingCompleted': true,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 

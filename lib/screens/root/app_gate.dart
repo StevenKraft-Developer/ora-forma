@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
-import '../../services/onboarding_storage.dart';
+import '../../providers/habit_provider.dart';
+import '../../services/firestore_habit_service.dart';
 import '../../main_navigation_screen.dart';
 import '../auth/welcome_screen.dart';
 import '../onboarding/habit_onboarding_screen.dart';
@@ -12,7 +13,7 @@ import '../onboarding/profile_setup_screen.dart';
 class AppGate extends StatefulWidget {
   const AppGate({super.key, this.loadHabitOnboarding});
 
-  final Future<bool> Function()? loadHabitOnboarding;
+  final Future<bool?> Function(String uid)? loadHabitOnboarding;
 
   @override
   State<AppGate> createState() => _AppGateState();
@@ -90,16 +91,21 @@ class _AppGateState extends State<AppGate> {
     if (_onboardingCheckStarted) return;
     _onboardingCheckStarted = true;
 
-    final load =
-        widget.loadHabitOnboarding ??
-        OnboardingStorage().loadOnboardingComplete;
+    Future<bool?>.sync(() {
+          final injected = widget.loadHabitOnboarding;
 
-    Future<bool>.sync(load)
+          if (injected != null) {
+            return injected(uid);
+          }
+
+          return FirestoreHabitService().loadOnboardingComplete(uid);
+        })
         .then((complete) {
           if (!_isCurrentSession(version, uid)) return;
 
           setState(() {
-            _habitOnboardingComplete = complete;
+            // Missing metadata requires review, not automatic completion.
+            _habitOnboardingComplete = complete ?? false;
           });
         })
         .catchError((Object error) {
@@ -252,8 +258,22 @@ class _AppGateState extends State<AppGate> {
     }
 
     if (_habitOnboardingComplete == false) {
+      final habits = context.watch<HabitProvider>();
+
+      if (habits.isLoading || !habits.isLoaded) {
+        return _loadingScreen();
+      }
+
       return HabitOnboardingScreen(
         key: ValueKey('habit-onboarding-$version-$uid'),
+        initialHabits: habits.allHabits,
+        onSave: (selected) async {
+          if (!_isCurrentSession(version, uid)) return false;
+
+          final saved = await habits.seedFromOnboarding(selected, uid: uid);
+
+          return saved && _isCurrentSession(version, uid);
+        },
         onCompleted: () => _onOnboardingCompleted(version, uid),
       );
     }
