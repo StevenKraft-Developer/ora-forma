@@ -281,4 +281,62 @@ void main() {
     expect(await saving, isFalse);
     expect(notifications, 1);
   });
+
+  test('shared save state covers the onboarding persistence window', () async {
+    await loadAccountA();
+    storage.saveGate = Completer<void>();
+
+    expect(provider.isSaving, isFalse);
+
+    final saving = provider.seedFromOnboarding([habitB], uid: 'user-a');
+
+    expect(provider.isSaving, isTrue);
+    expect(provider.isSavingOnboarding, isTrue);
+    expect(provider.allHabits, [habitA]);
+
+    storage.saveGate!.complete();
+
+    expect(await saving, isTrue);
+    expect(provider.isSaving, isFalse);
+    expect(provider.isSavingOnboarding, isFalse);
+    expect(provider.allHabits, [habitB]);
+  });
+
+  test(
+    'old save completion cannot release a newer session save guard',
+    () async {
+      await loadAccountA();
+
+      final oldGate = Completer<void>();
+      storage.saveGate = oldGate;
+
+      final oldSave = provider.seedFromOnboarding([habitA], uid: 'user-a');
+
+      provider.clear();
+
+      final reloading = provider.loadHabits('user-a');
+      storage.loads['user-a']!.complete([habitB]);
+      await reloading;
+
+      final newGate = Completer<void>();
+      storage.saveGate = newGate;
+
+      final newSave = provider.seedFromOnboarding([habitB], uid: 'user-a');
+
+      expect(provider.isSaving, isTrue);
+
+      oldGate.complete();
+
+      expect(await oldSave, isFalse);
+      expect(provider.isSaving, isTrue);
+      expect(provider.isSavingOnboarding, isTrue);
+      expect(provider.allHabits, [habitB]);
+
+      newGate.complete();
+
+      expect(await newSave, isTrue);
+      expect(provider.isSaving, isFalse);
+      expect(provider.isSavingOnboarding, isFalse);
+    },
+  );
 }
