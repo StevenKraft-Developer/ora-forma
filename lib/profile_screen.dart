@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'colors.dart';
 import 'providers/progress_provider.dart';
+import 'screens/habits/manage_habits_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -72,6 +73,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icons.alarm_rounded,
                       color: OraColors.gold,
                     ),
+                  ),
+                  const Divider(height: 1),
+                  _SettingsTile(
+                    icon: Icons.checklist_rounded,
+                    iconColor: OraColors.primary,
+                    title: 'Manage Habits',
+                    subtitle: 'Add, edit, archive, and restore your routine',
+                    onTap: () {
+                      final auth = context.read<AuthProvider>();
+                      final uid = auth.user?.uid;
+
+                      if (uid == null || auth.isLoading) return;
+
+                      final version = auth.sessionVersion;
+
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ManageHabitsScreen(
+                            uid: uid,
+                            sessionVersion: version,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   _SettingsTile(
