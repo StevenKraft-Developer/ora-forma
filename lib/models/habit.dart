@@ -102,21 +102,23 @@ class Habit {
     'isArchived': isArchived,
   };
 
-  // -------------------------------------------------------------------------
-  // copyWith — supports edit and archive flows in later tasks
-  // -------------------------------------------------------------------------
-
+  /// Copies this habit while preserving unspecified fields.
+  ///
+  /// Set [clearDescription] to true to remove the description.
+  /// Otherwise, a null [description] preserves the current value.
+  /// Clearing takes precedence if both arguments are supplied.
   Habit copyWith({
     String? id,
     String? title,
     String? description,
+    bool clearDescription = false,
     int? sortOrder,
     bool? isArchived,
   }) {
     return Habit(
       id: id ?? this.id,
       title: title ?? this.title,
-      description: description ?? this.description,
+      description: clearDescription ? null : description ?? this.description,
       sortOrder: sortOrder ?? this.sortOrder,
       isArchived: isArchived ?? this.isArchived,
     );
