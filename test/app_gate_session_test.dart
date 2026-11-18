@@ -12,6 +12,8 @@ import 'package:provider/provider.dart';
 import 'package:catholic_habits/screens/onboarding/habit_onboarding_screen.dart';
 import 'package:catholic_habits/models/habit.dart';
 import 'package:catholic_habits/providers/habit_provider.dart';
+import 'package:catholic_habits/main_navigation_screen.dart';
+import 'package:catholic_habits/providers/progress_provider.dart';
 
 class _FakeAuthProvider extends ChangeNotifier implements AuthProvider {
   AppUser _currentUser = const AppUser(
@@ -85,18 +87,73 @@ UserProfile _profile(String uid) {
 }
 
 class _FakeHabitProvider extends ChangeNotifier implements HabitProvider {
-  @override
-  bool get isLoading => false;
+  bool _loading = false;
+  bool _loaded = true;
+  String? _loadError;
+
+  final retryUids = <String>[];
+  Completer<void>? _retry;
 
   @override
-  bool get isLoaded => true;
+  bool get isLoading => _loading;
+
+  @override
+  bool get isLoaded => _loaded;
+
+  @override
+  String? get loadError => _loadError;
 
   @override
   List<Habit> get allHabits => kDefaultCatholicHabitSet;
 
+  void failLoad() {
+    _loading = false;
+    _loaded = false;
+    _loadError = 'Your habits could not be loaded. Please try again.';
+    notifyListeners();
+  }
+
+  @override
+  Future<void> retryLoadHabits(String uid) {
+    retryUids.add(uid);
+    _loading = true;
+    _loaded = false;
+    _loadError = null;
+    final pending = Completer<void>();
+    _retry = pending;
+    notifyListeners();
+    return pending.future;
+  }
+
+  void finishRetry({required bool succeeds}) {
+    final pending = _retry!;
+    _retry = null;
+
+    _loading = false;
+    _loaded = succeeds;
+    _loadError = succeeds
+        ? null
+        : 'Your habits could not be loaded. Please try again.';
+
+    notifyListeners();
+    pending.complete();
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw UnsupportedError('Unexpected habit call: ${invocation.memberName}');
+  }
+}
+
+class _FakeProgressProvider extends ChangeNotifier implements ProgressProvider {
+  @override
+  bool get isLoaded => false;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnsupportedError(
+      'Unexpected progress call: ${invocation.memberName}',
+    );
   }
 }
 
@@ -105,6 +162,7 @@ class _GateHarness {
   final service = _FakeProfileService();
   final onboardingRequests = <Completer<bool?>>[];
   final habits = _FakeHabitProvider();
+  final progress = _FakeProgressProvider();
   final onboardingUids = <String>[];
 
   Future<bool?> loadOnboarding(String uid) {
@@ -130,6 +188,7 @@ class _GateHarness {
           ChangeNotifierProvider<AuthProvider>.value(value: auth),
           ChangeNotifierProvider<UserProfileProvider>.value(value: profiles),
           ChangeNotifierProvider<HabitProvider>.value(value: habits),
+          ChangeNotifierProvider<ProgressProvider>.value(value: progress),
         ],
         child: MaterialApp(home: AppGate(loadHabitOnboarding: loadOnboarding)),
       ),
@@ -152,10 +211,152 @@ class _GateHarness {
     profiles.dispose();
     auth.dispose();
     habits.dispose();
+    progress.dispose();
   }
 }
 
 void main() {
+  for (final onboardingComplete in [false, true]) {
+    testWidgets(
+      onboardingComplete
+          ? 'habit load error blocks returning-user routing and retries'
+          : 'habit load error blocks onboarding routing and retries',
+      (tester) async {
+        final harness = _GateHarness();
+        addTearDown(harness.dispose);
+
+        harness.habits.failLoad();
+
+        await harness.mount(tester);
+        await harness.completeCurrentProfile(tester);
+
+        harness.onboardingRequests.single.complete(onboardingComplete);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Your habits could not be loaded. Please try again.'),
+          findsOneWidget,
+        );
+        expect(find.text('Try again'), findsOneWidget);
+        expect(find.byType(HabitOnboardingScreen), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(harness.habits.retryUids, isEmpty);
+
+        await tester.tap(find.text('Try again'));
+        await tester.pump();
+
+        expect(harness.habits.retryUids, ['user-a']);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Try again'), findsNothing);
+        expect(find.byType(HabitOnboardingScreen), findsNothing);
+
+        harness.habits.finishRetry(succeeds: false);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Your habits could not be loaded. Please try again.'),
+          findsOneWidget,
+        );
+        expect(find.text('Try again'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        // Retrying habits must not re-read or alter onboarding status.
+        expect(harness.onboardingRequests, hasLength(1));
+        expect(harness.onboardingUids, ['user-a']);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets('successful habit retry resumes the main app', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final harness = _GateHarness();
+    addTearDown(harness.dispose);
+
+    harness.habits.failLoad();
+
+    await harness.mount(tester);
+    await harness.completeCurrentProfile(tester);
+
+    harness.onboardingRequests.single.complete(true);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Your habits could not be loaded. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.byType(MainNavigationScreen), findsNothing);
+    expect(find.byType(HabitOnboardingScreen), findsNothing);
+
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+
+    expect(harness.habits.retryUids, ['user-a']);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(MainNavigationScreen), findsNothing);
+
+    harness.habits.finishRetry(succeeds: true);
+
+    // Progress deliberately remains loading. Pump a bounded number of
+    // frames rather than waiting for its spinners to settle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(MainNavigationScreen), findsOneWidget);
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    expect(find.byType(HabitOnboardingScreen), findsNothing);
+    expect(find.text('Try again'), findsNothing);
+
+    // Habit recovery must preserve the previously read onboarding status.
+    expect(harness.onboardingRequests, hasLength(1));
+    expect(harness.onboardingUids, ['user-a']);
+    expect(harness.habits.retryUids, ['user-a']);
+    expect(tester.takeException(), isNull);
+
+    // Unmount the main app before disposing the harness providers.
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('successful habit retry resumes onboarding', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final harness = _GateHarness();
+    addTearDown(harness.dispose);
+
+    harness.habits.failLoad();
+
+    await harness.mount(tester);
+    await harness.completeCurrentProfile(tester);
+
+    harness.onboardingRequests.single.complete(false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.byType(HabitOnboardingScreen), findsNothing);
+
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+
+    expect(harness.habits.retryUids, ['user-a']);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    harness.habits.finishRetry(succeeds: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Try again'), findsNothing);
+    expect(find.byType(HabitOnboardingScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<HabitOnboardingScreen>(find.byType(HabitOnboardingScreen))
+          .initialHabits,
+      kDefaultCatholicHabitSet,
+    );
+    expect(harness.onboardingRequests, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('obsolete profile success cannot route the newer session', (
     tester,
   ) async {
