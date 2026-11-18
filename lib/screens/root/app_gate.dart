@@ -257,13 +257,24 @@ class _AppGateState extends State<AppGate> {
       return _loadingScreen();
     }
 
+    final habits = context.watch<HabitProvider>();
+
+    if (habits.loadError != null) {
+      return _retryScreen(
+        message: habits.loadError!,
+        onRetry: () {
+          if (!_isCurrentSession(version, uid)) return;
+
+          context.read<HabitProvider>().retryLoadHabits(uid);
+        },
+      );
+    }
+
+    if (habits.isLoading || !habits.isLoaded) {
+      return _loadingScreen();
+    }
+
     if (_habitOnboardingComplete == false) {
-      final habits = context.watch<HabitProvider>();
-
-      if (habits.isLoading || !habits.isLoaded) {
-        return _loadingScreen();
-      }
-
       return HabitOnboardingScreen(
         key: ValueKey('habit-onboarding-$version-$uid'),
         initialHabits: habits.allHabits,

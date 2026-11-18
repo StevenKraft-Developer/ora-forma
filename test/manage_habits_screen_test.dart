@@ -67,8 +67,17 @@ class _TestHabitStorage implements FirestoreHabitService {
   final savedUids = <String>[];
   Completer<void>? saveGate;
 
+  final loadUids = <String>[];
+  bool failLoad = false;
+
   @override
   Future<List<Habit>?> loadHabits(String uid) async {
+    loadUids.add(uid);
+
+    if (failLoad) {
+      throw StateError('Test habit load failure');
+    }
+
     return List<Habit>.from(catalogs[uid] ?? const []);
   }
 
@@ -148,6 +157,61 @@ Future<void> _fillForm(WidgetTester tester) async {
 }
 
 void main() {
+  for (final retryFails in [false, true]) {
+    testWidgets(
+      retryFails
+          ? 'failed habit retry returns to the error screen'
+          : 'habit load retry recovers the catalog',
+      (tester) async {
+        final storage = _TestHabitStorage()..failLoad = true;
+        final auth = _TestAuthProvider();
+        final habits = HabitProvider(storage);
+
+        await _mount(tester, auth: auth, habits: habits);
+
+        final retryButton = find.byKey(const ValueKey('retry-habit-load'));
+
+        expect(
+          find.text('Your habits could not be loaded. Please try again.'),
+          findsOneWidget,
+        );
+        expect(retryButton, findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byKey(const ValueKey('add-habit')), findsNothing);
+        expect(find.text('First habit'), findsNothing);
+        expect(storage.loadUids, ['user-a']);
+        expect(storage.savedUids, isEmpty);
+
+        storage.failLoad = retryFails;
+
+        await tester.tap(retryButton);
+        await tester.pumpAndSettle();
+
+        expect(storage.loadUids, ['user-a', 'user-a']);
+        expect(storage.savedUids, isEmpty);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        if (retryFails) {
+          expect(retryButton, findsOneWidget);
+          expect(
+            find.text('Your habits could not be loaded. Please try again.'),
+            findsOneWidget,
+          );
+          expect(find.text('First habit'), findsNothing);
+          expect(habits.isLoaded, isFalse);
+        } else {
+          expect(retryButton, findsNothing);
+          expect(find.text('First habit'), findsOneWidget);
+          expect(find.byKey(const ValueKey('add-habit')), findsOneWidget);
+          expect(habits.isLoaded, isTrue);
+          expect(habits.loadError, isNull);
+        }
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('failed save preserves input and allows retry', (tester) async {
     final storage = _TestHabitStorage();
     final auth = _TestAuthProvider();

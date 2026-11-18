@@ -31,6 +31,7 @@ class HabitProvider extends ChangeNotifier {
   List<Habit> _habits = [];
   bool _isLoading = false;
   bool _isLoaded = false;
+  String? _loadError;
   bool _isSavingOnboarding = false;
   bool _isSavingCatalog = false;
 
@@ -56,6 +57,7 @@ class HabitProvider extends ChangeNotifier {
   bool get isLoaded => _isLoaded;
   bool get isSavingOnboarding => _isSavingOnboarding;
   bool get isSaving => _isSavingCatalog;
+  String? get loadError => _loadError;
 
   /// True when there is at least one habit (active or archived).
   bool get hasHabits => _habits.isNotEmpty;
@@ -67,15 +69,24 @@ class HabitProvider extends ChangeNotifier {
   // Initialization
   // ---------------------------------------------------------------------------
 
+  /// Loads the account's catalog.
+  ///
+  /// Load failures are exposed through [loadError], not rethrown.
+  /// Ordinary account synchronization does not retry a failed load;
+  /// the user must explicitly call [retryLoadHabits].
   Future<void> loadHabits(String uid) async {
     if (_isDisposed) return;
-    if (_uid == uid && (_isLoaded || _isLoading)) return;
+
+    if (_uid == uid && (_isLoaded || _isLoading || _loadError != null)) {
+      return;
+    }
 
     final version = ++_sessionVersion;
 
     _uid = uid;
     _isLoading = true;
     _isLoaded = false;
+    _loadError = null;
     _isSavingOnboarding = false;
     _isSavingCatalog = false;
     _habits = [];
@@ -100,12 +111,35 @@ class HabitProvider extends ChangeNotifier {
 
       _sortHabits();
       _isLoaded = true;
+    } catch (_) {
+      if (!_isCurrentSession(version, uid)) return;
+
+      _habits = [];
+      _isLoaded = false;
+      _loadError = 'Your habits could not be loaded. Please try again.';
     } finally {
       if (_isCurrentSession(version, uid)) {
         _isLoading = false;
         notifyListeners();
       }
     }
+  }
+
+  /// Retries a failed load only for the currently bound account.
+  ///
+  /// Ignores duplicate requests, wrong-account requests, and requests
+  /// when there is no failed load to retry.
+  Future<void> retryLoadHabits(String uid) async {
+    if (_isDisposed ||
+        _uid != uid ||
+        _isLoading ||
+        _isLoaded ||
+        _loadError == null) {
+      return;
+    }
+
+    _loadError = null;
+    await loadHabits(uid);
   }
 
   // ---------------------------------------------------------------------------
@@ -277,6 +311,7 @@ class HabitProvider extends ChangeNotifier {
     _habits = [];
     _isLoading = false;
     _isLoaded = false;
+    _loadError = null;
     _isSavingOnboarding = false;
     _isSavingCatalog = false;
 

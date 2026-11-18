@@ -149,6 +149,36 @@ class _ManageHabitsScreenState extends State<ManageHabitsScreen> {
     }
 
     final provider = context.watch<HabitProvider>();
+
+    if (provider.loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Manage Habits')),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(provider.loadError!, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    key: const ValueKey('retry-habit-load'),
+                    onPressed: () {
+                      if (!_isCurrentSession) return;
+
+                      context.read<HabitProvider>().retryLoadHabits(widget.uid);
+                    },
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final ready = provider.isLoaded && !provider.isLoading;
     final busy = provider.isSaving;
     final active = provider.activeHabits;
